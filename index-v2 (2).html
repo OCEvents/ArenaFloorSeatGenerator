@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceremony Ground Plan Generator v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#181d2c;font-family:system-ui,Arial,sans-serif;color:#e0eeff;min-height:100vh;padding:10px}
+.page-title{text-align:center;margin-bottom:10px}
+.page-title .sub{font-size:9px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:#7ab0e0;margin-bottom:2px}
+.page-title .main{font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aad4f0}
+.layout{display:flex;gap:10px;align-items:flex-start}
+.left-panel{width:265px;flex-shrink:0;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-right:2px}
+.center-panel{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.card{background:#0e1320;border:1.5px solid #263a56;border-radius:6px;padding:10px}
+.card-lg{background:#0e1320;border:1.5px solid #263a56;border-radius:6px;padding:12px}
+.section-head{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#aad4f0;padding-bottom:7px;margin-bottom:8px;border-bottom:1px solid #263a56;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.section-head .sh-arrow{font-size:10px;color:#5a80a0;transition:transform .2s;flex-shrink:0;margin-left:6px}
+.section-head.collapsed .sh-arrow{transform:rotate(-90deg)}
+.card-body{overflow:hidden;transition:none}
+.card-body.collapsed{display:none}
+.venue-label{font-size:11px;font-weight:600;color:#aad4f0;margin-bottom:8px}
+.field-label{font-size:10px;color:#8aacc8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.text-input{background:transparent;border:1px solid #2a4a6e;border-radius:4px;color:#e0eeff;font-size:13px;font-weight:600;padding:6px 8px;outline:none;width:100%;font-family:system-ui,Arial,sans-serif}
+.text-input:focus{border-color:#7ab0e0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.span2{grid-column:span 2}
+/* Cells */
+.cell{border-radius:4px;padding:8px 9px}
+.cell .cl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;display:flex;justify-content:space-between}
+.cell .cl .edit-hint{font-size:9px;color:#7040b0}
+.cell .cv{font-size:17px;font-weight:700}
+.cell input{background:transparent;border:none;border-bottom:1.5px solid #6040b0;font-size:17px;font-weight:700;width:100%;outline:none;padding:2px 0;font-family:system-ui,Arial,sans-serif}
+.cell-purple{background:#16102a;border:1px solid #4a2a8a}
+.cell-purple .cl{color:#b090e0}
+.cell-purple .cv,.cell-purple input{color:#e0d0ff}
+.cell-green{background:#0a1c14;border:1px solid #2a5a3a}
+.cell-green .cl{color:#5aba80}
+.cell-green .cv{color:#7ad4a0}
+.cell-dark{background:#111824;border:1px solid #1e3050}
+.cell-dark .cl{color:#8aacc8}
+.cell-dark .cv{color:#e0eeff}
+.cell-warn{background:#161400;border:1px solid #5a5020}
+.cell-warn .cl{color:#b09020}
+.cell-warn .cv,.cell-warn input{color:#d4c040}
+/* Stepper */
+.stepper{background:#16102a;border:1px solid #4a2a8a;border-radius:4px;padding:8px 9px}
+.stepper .sl{font-size:10px;color:#b090e0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stepper .row{display:flex;align-items:center;gap:5px}
+.stepper .val{flex:1;text-align:center;font-size:15px;font-weight:700;color:#e0d0ff;white-space:nowrap;overflow:hidden}
+.stepper .hint{font-size:9px;color:#4a2a70;margin-top:3px}
+.step-btn{background:#130d24;border:1px solid #4a2a80;border-radius:3px;color:#c4a0ff;font-size:16px;font-weight:700;width:25px;height:25px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-btn:disabled{color:#3a2060;cursor:default}
+/* Toggle */
+.toggle-wrap{background:#16102a;border:1px solid #4a2a8a;border-radius:4px;padding:8px 9px}
+.toggle-wrap .tl{font-size:10px;color:#b090e0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.toggle-wrap .tbts{display:flex;gap:4px}
+.tbtn{border-radius:3px;font-size:11px;font-weight:600;padding:4px 0;cursor:pointer;flex:1;text-align:center;border:1px solid #2e1850;background:#0c0818;color:#4a3070}
+.tbtn.active{background:#1a1038;border-color:#7050c0;color:#c4a0ff}
+/* Selector */
+.sel-wrap{background:#16102a;border:1px solid #4a2a8a;border-radius:4px;padding:8px 9px}
+.sel-wrap .sl{font-size:10px;color:#b090e0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.sel-wrap .sbts{display:flex;flex-wrap:wrap;gap:3px}
+.sbtn{border-radius:3px;font-size:11px;font-weight:600;padding:4px 7px;cursor:pointer;flex:1;text-align:center;border:1px solid #2e1850;background:#0c0818;color:#4a3070}
+.sbtn.active{background:#1a1038;border-color:#7050c0;color:#c4a0ff}
+/* AVL count */
+.avl-count{display:flex;gap:3px;margin-bottom:7px}
+.avl-btn{flex:1;background:#0c0818;border:1px solid #2e1850;border-radius:3px;color:#4a3070;font-size:14px;font-weight:700;padding:6px 0;cursor:pointer;text-align:center}
+.avl-btn.active{background:#1a1038;border-color:#7050c0;color:#c4a0ff}
+/* Errors/Warnings */
+.msg-err{background:#2a0d0d;border:1px solid #7a2020;border-radius:4px;padding:7px 9px;font-size:11px;color:#ff8080}
+.msg-warn{background:#161400;border:1px solid #5a5020;border-radius:4px;padding:7px 9px;font-size:11px;color:#d4c040}
+/* Export */
+.exp-btn{background:#0c1828;border:1.5px solid #2a4a6e;border-radius:4px;color:#7ab0e0;font-size:12px;font-weight:700;padding:8px 9px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;width:100%}
+.exp-btn:hover{border-color:#7ab0e0}
+.exp-btn span{font-size:9px;color:#8aacc8;font-weight:400}
+.watermark{font-size:10px;color:#2a4060;text-align:center;padding:4px 0}
+/* Diagram header */
+.diag-hdr{text-align:center;margin-bottom:10px}
+.diag-hdr .vn{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#7ab0e0;margin-bottom:2px}
+.diag-hdr .et{font-size:17px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aad4f0}
+.diag-hdr .sub{font-size:12px;color:#6090bb}
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #263a56}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#8ab0d0}
+.leg-swatch{width:14px;height:9px;border-radius:2px;flex-shrink:0}
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:6px}
+.stat-cell{background:#111824;border:1px solid #1e3050;border-radius:4px;padding:8px 9px}
+.stat-cell.green{background:#0a1c14;border-color:#2a5a3a}
+.stat-cell .sl{font-size:10px;color:#8aacc8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.stat-cell.green .sl{color:#5aba80}
+.stat-cell .sv{font-size:15px;font-weight:700;color:#e0eeff}
+.stat-cell.green .sv{color:#7ad4a0}
+.no-diagram{padding:80px 20px;text-align:center;color:#8aacc8;font-size:14px}
+.hint{font-size:10px;color:#8aacc8;margin-bottom:7px}
+
+/* v2: Three-column layout */
+
+.right-panel{width:265px;flex-shrink:0;position:sticky;top:8px;max-height:calc(100vh - 16px);overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding-left:2px}
+
+/* v2: Hover tooltip */
+#hover-tip{position:fixed;background:#0a1828;border:1px solid #2a5080;border-radius:4px;padding:5px 8px;font-size:10px;color:#aad4f0;pointer-events:none;z-index:9999;display:none;white-space:nowrap;line-height:1.6}
+#canvas-wrap.measure-mode{cursor:crosshair}
+/* v2: Dimensions panel */
+.dim-section{margin-bottom:8px}
+.dim-section-head{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7a9ab8;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid #1a2e44}
+.dim-row{display:flex;align-items:center;gap:6px;padding:2px 0}
+.dim-row label{font-size:10px;color:#8aacc8;flex:1;cursor:pointer}
+.dim-chk{accent-color:#5a90d0;cursor:pointer;flex-shrink:0}
+.dim-master{display:flex;gap:4px;margin-bottom:8px}
+.dim-master-btn{flex:1;background:#0c1828;border:1px solid #1e3a56;border-radius:3px;color:#6090bb;font-size:10px;font-weight:600;padding:5px 4px;cursor:pointer;text-align:center}
+.dim-master-btn:hover{border-color:#5a90d0;color:#aad4f0}
+/* v2: Furniture */
+.furn-palette{display:flex;flex-direction:column;gap:4px}
+.furn-row{display:flex;align-items:center;gap:6px;padding:5px 7px;background:#0a1220;border:1px solid #1a2e48;border-radius:4px}
+.furn-icon{width:28px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.furn-label{flex:1;font-size:11px;color:#8ab0d0}
+.furn-add{background:#0c2040;border:1px solid #2a5080;border-radius:3px;color:#7ab0e0;font-size:15px;font-weight:700;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.furn-add:hover{background:#163060;border-color:#5a90d0}
+/* v2: Toolbar */
+.tb-btn{background:#0c1828;border:1px solid #1e3a56;border-radius:3px;color:#6090bb;font-size:11px;font-weight:600;padding:5px 8px;cursor:pointer;white-space:nowrap}
+.tb-btn:hover{border-color:#5a90d0;color:#aad4f0}
+.tb-btn.active{background:#0a2040;border-color:#5a90d0;color:#7ab0e0}
+.tb-btn.danger{border-color:#7a2020;color:#e07070}
+.tb-btn.danger:hover{background:#2a0d0d}
+/* v2: Count */
+.count-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.count-cell{background:#0a1220;border:1px solid #1a2e48;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;font-size:10px}
+.count-label{color:#6090bb;font-size:10px}
+.count-val{color:#aad4f0;font-weight:700;font-size:13px}
+
+
+/* Scenario tabs */
+.tab-bar{display:flex;align-items:center;gap:0;background:#0a0f1a;border-bottom:2px solid #263a56;padding:0 10px;position:sticky;top:0;z-index:100;flex-wrap:nowrap;overflow-x:auto}
+.tab-bar::-webkit-scrollbar{height:3px}
+.tab-bar::-webkit-scrollbar-thumb{background:#263a56}
+.tab{display:flex;align-items:center;gap:6px;padding:7px 14px 6px;font-size:11px;font-weight:600;color:#6090bb;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;user-select:none;flex-shrink:0}
+.tab:hover{color:#aad4f0;background:#0e1320}
+.tab.active{color:#aad4f0;border-bottom-color:#5a90d0;background:#0e1320}
+.tab-close{font-size:13px;color:#3a5070;line-height:1;padding:0 2px;border-radius:2px}
+.tab-close:hover{color:#e07070;background:#2a0d0d}
+.tab-add{padding:6px 12px;font-size:16px;font-weight:700;color:#3a6090;cursor:pointer;flex-shrink:0}
+.tab-add:hover{color:#7ab0e0}
+</style>
+</head>
+<body>
+<div id="hover-tip"></div>
+<div class="tab-bar" id="tab-bar"></div>
+
+<div class="page-title">
+  <div class="sub">Ceremony Ground Plan Generator</div>
+  <div class="main">Layout Builder v2</div>
+</div>
+
+<div class="layout">
+  <div class="left-panel">
+
+    <!-- Event Info -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="info-body" class="section-head collapsed">— Event Info —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="info-body">
+      <div class="venue-label" id="venue-display">Opportunity Central Arena</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div>
+          <div class="field-label">Event Title</div>
+          <input class="text-input" id="inp-title" value="Forney HS Ceremony Ground Plan">
+        </div>
+        <div>
+          <div class="field-label">Date (DD/MM/YY)</div>
+          <input class="text-input" id="inp-date" placeholder="DD/MM/YY" maxlength="8">
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Stage -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="stage-body" class="section-head collapsed">— Stage —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="stage-body"><div class="grid2">
+        <div class="stepper">
+          <div class="sl">Width</div>
+          <div class="row">
+            <button class="step-btn" id="sw-dec">−</button>
+            <div class="val" id="sw-val">44 ft</div>
+            <button class="step-btn" id="sw-inc">+</button>
+          </div>
+          <div class="hint">step 4 ft</div>
+        </div>
+        <div class="stepper">
+          <div class="sl">Depth</div>
+          <div class="row">
+            <button class="step-btn" id="sd-dec">−</button>
+            <div class="val" id="sd-val">24 ft</div>
+            <button class="step-btn" id="sd-inc">+</button>
+          </div>
+          <div class="hint">step 8 ft</div>
+        </div>
+        <div class="cell cell-purple" id="cell-bw">
+          <div class="cl"><span>Back Wall (ft)</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-bw" value="8" step="1" min="0">
+        </div>
+        <div class="cell cell-purple" id="cell-fa">
+          <div class="cl"><span>Front Aisle (ft)</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-fa" value="6" step="1" min="2">
+        </div>
+        <div class="toggle-wrap">
+          <div class="tl">Ramps</div>
+          <div class="tbts">
+            <button class="tbtn active" data-group="ramps" data-val="1">On</button>
+            <button class="tbtn" data-group="ramps" data-val="0">Off</button>
+          </div>
+        </div>
+        <div class="toggle-wrap">
+          <div class="tl">Camera Platform</div>
+          <div class="tbts">
+            <button class="tbtn active" data-group="cam" data-val="1">On</button>
+            <button class="tbtn" data-group="cam" data-val="0">Off</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- Seating -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="seating-body" class="section-head collapsed">— Seating —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="seating-body"><div class="hint">Purple cells are editable</div><div class="grid2">
+        <div class="cell cell-green">
+          <div class="cl"><span>Total Chairs</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-total-chairs" value="" step="1" min="4" style="background:transparent;border:none;border-bottom:1.5px solid #3a8a5a;font-size:17px;font-weight:700;width:100%;outline:none;padding:2px 0;color:#7ad4a0;font-family:system-ui,Arial,sans-serif">
+        </div>
+        <div class="cell cell-purple">
+          <div class="cl"><span>Total Rows</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-rows" value="24" step="1" min="1">
+        </div>
+        <div class="cell cell-purple">
+          <div class="cl"><span>Chairs / Side</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-cps" value="17" step="1" min="2">
+        </div>
+        <div class="cell cell-purple">
+          <div class="cl"><span>Chairs / Row</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-cpr" value="" step="1" min="4">
+        </div>
+        <div class="cell cell-purple" id="cell-gap">
+          <div class="cl"><span>Row Gap (in)</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-gap" value="18" step="1" min="0">
+        </div>
+        <div class="toggle-wrap">
+          <div class="tl">Row Labels</div>
+          <div class="tbts">
+            <button class="tbtn active" data-group="rowlabels" data-val="alpha">A B C</button>
+            <button class="tbtn" data-group="rowlabels" data-val="num">1 2 3</button>
+          </div>
+        </div>
+        <div class="cell cell-purple" id="cell-ca" style="display:none">
+          <div class="cl"><span>Ctr Aisle (ft)</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-ca" value="8" step="0.5" min="2">
+        </div>
+        <div class="span2 toggle-wrap">
+          <div class="tl">Different First Rows</div>
+          <div class="tbts">
+            <button class="tbtn" data-group="difffirstrows" data-val="1">On</button>
+            <button class="tbtn active" data-group="difffirstrows" data-val="0">Off</button>
+          </div>
+        </div>
+        <div class="cell cell-purple" id="cell-fr1" style="display:none">
+          <div class="cl"><span>Row 1 / Side</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-fr1" value="15" step="1" min="1">
+        </div>
+        <div class="cell cell-purple" id="cell-fr2" style="display:none">
+          <div class="cl"><span>Row 2 / Side</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-fr2" value="15" step="1" min="1">
+        </div>
+        <div class="span2 toggle-wrap">
+          <div class="tl">Center Aisle</div>
+          <div class="tbts">
+            <button class="tbtn active" data-group="hasctr" data-val="1">Split</button>
+            <button class="tbtn" data-group="hasctr" data-val="0">Single Row</button>
+          </div>
+        </div>
+        <div class="toggle-wrap">
+          <div class="tl">Chair Gap</div>
+          <div class="tbts">
+            <button class="tbtn active" data-group="clip" data-val="1">1 in</button>
+            <button class="tbtn" data-group="clip" data-val="0">0 in</button>
+          </div>
+        </div>
+        <div class="span2 sel-wrap">
+          <div class="sl">Adult Seat Placement</div>
+          <div class="sbts">
+            <button class="sbtn active" data-group="adults" data-val="both">Both Ends</button>
+            <button class="sbtn" data-group="adults" data-val="left">Left Only</button>
+            <button class="sbtn" data-group="adults" data-val="right">Right Only</button>
+            <button class="sbtn" data-group="adults" data-val="none">None</button>
+          </div>
+        </div>
+        <div class="span2 toggle-wrap">
+          <div class="tl">Midsection Aisle</div>
+          <div class="tbts">
+            <button class="tbtn" data-group="midaisle" data-val="1">On</button>
+            <button class="tbtn active" data-group="midaisle" data-val="0">Off</button>
+          </div>
+        </div>
+        <div class="cell cell-purple" id="cell-ma-after" style="display:none">
+          <div class="cl"><span>After Row</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-ma-after" value="12" step="1" min="1">
+        </div>
+        <div class="cell cell-purple" id="cell-ma-depth" style="display:none">
+          <div class="cl"><span>Depth (ft)</span><span class="edit-hint">EDIT</span></div>
+          <input type="number" id="inp-ma-depth" value="4" step="0.5" min="1">
+        </div>
+      </div></div>
+    </div>
+
+    <!-- AVL -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="avl-body" class="section-head collapsed">— AVL Positions —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="avl-body"><div class="hint">8 ft wide × 4 ft deep · Touches back of last row</div>
+      <div style="margin-bottom:7px">
+        <div class="field-label" style="color:#b090e0;margin-bottom:5px">Count (0–4)</div>
+        <div class="avl-count">
+          <button class="avl-btn active" data-avl="0">0</button>
+          <button class="avl-btn" data-avl="1">1</button>
+          <button class="avl-btn" data-avl="2">2</button>
+          <button class="avl-btn" data-avl="3">3</button>
+          <button class="avl-btn" data-avl="4">4</button>
+        </div>
+      </div>
+      <div id="avl-side-wrap" style="display:none">
+        <div class="sel-wrap">
+          <div class="sl">Primary Side (1 &amp; 2)</div>
+          <div class="sbts">
+            <button class="sbtn active" data-group="avlside" data-val="left">Left</button>
+            <button class="sbtn" data-group="avlside" data-val="right">Right</button>
+          </div>
+        </div>
+      </div>
+      <div id="avl-mirror-note" style="display:none;font-size:9px;color:#8aacc8;margin-top:6px">3rd &amp; 4th auto-mirror opposite side</div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="msg-container"></div>
+
+    <!-- Layout File (moved from right panel) -->
+    <div class="card" id="layout-file-card">
+      <div class="section-head collapsed" data-target="layout-file-body" class="section-head collapsed">— Layout File —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="layout-file-body">
+        <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px">
+          <button class="exp-btn" id="btn-save-json">Save Layout JSON<span>furniture &amp; measures</span></button>
+          <label class="exp-btn" style="cursor:pointer">Load Layout JSON<span>restore saved layout</span>
+            <input type="file" id="inp-load-json" accept=".json" style="display:none">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="watermark">Developed by: Holden W.</div>
+  </div>
+
+  <!-- Center panel: diagram -->
+  <div class="center-panel">
+    <div class="card-lg">
+      <div class="diag-hdr">
+        <div class="vn">Opportunity Central Arena</div>
+        <div class="et" id="diag-title">Forney HS Ceremony Ground Plan</div>
+        <div class="sub" id="diag-sub">&mdash; Chairs &middot; 83 ft &times; 144 ft</div>
+      </div>
+      <div id="canvas-wrap">
+        <div id="svg-container"><div class="no-diagram">Adjust settings to generate diagram.</div></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card-lg" id="stats-card" style="display:none">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#aad4f0;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid #263a56">&mdash; Measurements &amp; Statistics &mdash;</div>
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+    <div class="card-lg" id="notes-card">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#aad4f0;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid #263a56">&mdash; Notes &mdash;</div>
+      <div id="notes-container"><textarea id="notes-input" placeholder="Type notes here. Press Enter for a new bullet point." style="width:100%;min-height:120px;background:#0a1220;border:1px solid #263a56;border-radius:4px;color:#e0eeff;font-size:12px;font-family:system-ui,Arial,sans-serif;padding:8px;resize:vertical;outline:none;line-height:1.6"></textarea></div>
+    </div>
+    <div class="watermark" style="padding-left:2px;text-align:left">Developed by: Holden W.</div>
+  </div>
+
+  <!-- Right panel: v2 tools — Edit first -->
+  <div class="right-panel">
+
+    <!-- EDIT (top) -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="edit-body" class="section-head collapsed">&mdash; Edit &mdash;<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="edit-body">
+        <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px">
+          <div style="display:flex;gap:4px">
+            <button tabindex="-1" class="tb-btn" id="btn-mode-select">&#10022; Select</button>
+            <button tabindex="-1" class="tb-btn" id="btn-mode-measure">&#8660; Measure</button>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button tabindex="-1" class="tb-btn" id="btn-rot-ccw">&#8634; 45&#176;</button>
+            <button tabindex="-1" class="tb-btn" id="btn-rot-cw">&#8635; 45&#176;</button>
+            <button tabindex="-1" class="tb-btn" id="btn-dup">&#9112; Dup</button>
+            <button tabindex="-1" class="tb-btn danger" id="btn-del">&#10005; Del</button>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button tabindex="-1" class="tb-btn" id="btn-lock">&#128274; Lock</button>
+            <button tabindex="-1" class="tb-btn" id="btn-undo">&#8617; Undo</button>
+            <button tabindex="-1" class="tb-btn" id="btn-redo">&#8618; Redo</button>
+          </div>
+          <div style="font-size:9px;color:#5a7090;margin-top:3px">Align selected:</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            <button tabindex="-1" class="tb-btn" id="btn-al-l" title="Left edges">&#8866;L</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-r" title="Right edges">R&#8867;</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-t" title="Top edges">&#8868;T</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-b" title="Bottom edges">B&#8869;</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-ch" title="Center H">&#8596;H</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-cv" title="Center V">&#8597;V</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-dh" title="Distribute H">&#8660;&#916;</button>
+            <button tabindex="-1" class="tb-btn" id="btn-al-dv" title="Distribute V">&#8661;&#916;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIMENSIONS -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="dims-body" class="section-head collapsed">&mdash; Dimensions &mdash;<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="dims-body">
+        <div style="padding-top:2px">
+          <div class="dim-master">
+            <button tabindex="-1" class="dim-master-btn" id="btn-all-dims">All Dims</button>
+            <button tabindex="-1" class="dim-master-btn" id="btn-all-labels">All Labels</button>
+            <button tabindex="-1" class="dim-master-btn" id="btn-none-all">None</button>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Room</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-room-w" checked><label for="dv-room-w">Width (83 ft)</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-room-h" checked><label for="dv-room-h">Height (144 ft)</label></div>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Stage Area</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-back-wall-lbl" checked><label for="dv-back-wall-lbl">Back Wall label</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-stage-lbl" checked><label for="dv-stage-lbl">STAGE label</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-ramp-lbl" checked><label for="dv-ramp-lbl">RAMP L/R labels</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-deadzone" checked><label for="dv-deadzone">Dead zone dims</label></div>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Front Aisle</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-front-aisle-dim" checked><label for="dv-front-aisle-dim">Front aisle dim</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-aisle-labels" checked><label for="dv-aisle-labels">Aisle name labels</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-aisle-meas" checked><label for="dv-aisle-meas">Aisle measure lines</label></div>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Rear Aisle</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-rear-aisle-dim" checked><label for="dv-rear-aisle-dim">Rear aisle dim</label></div>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Midsection Aisle</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-mid-aisle-lbl" checked><label for="dv-mid-aisle-lbl">Mid aisle label</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-mid-aisle-dim" checked><label for="dv-mid-aisle-dim">Mid aisle dim</label></div>
+          </div>
+          <div class="dim-section">
+            <div class="dim-section-head">Equipment</div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-avl-lbl" checked><label for="dv-avl-lbl">AVL labels</label></div>
+            <div class="dim-row"><input type="checkbox" class="dim-chk" id="dv-cam-lbl" checked><label for="dv-cam-lbl">Camera label</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FURNITURE -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="furn-body" class="section-head collapsed">&mdash; Furniture &mdash;<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="furn-body">
+        <div class="furn-palette" style="padding-top:2px">
+          <div class="furn-row"><div class="furn-icon"><svg width="20" height="15" viewBox="0 0 20 15"><rect x="1" y="1" width="18" height="13" rx="2" fill="#1a5fa8" stroke="#4a8ad8" stroke-width="1"/><line x1="5" y1="1" x2="3" y2="14" stroke="#4a8ad8" stroke-width="0.8"/></svg></div><span class="furn-label">Chair 19.5&#8243;&times;24&#8243;</span><button class="furn-add" tabindex="-1" data-place="chair-furn">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="28" height="11" viewBox="0 0 28 11"><rect width="28" height="11" rx="1" fill="#2d2d2d" stroke="#555" stroke-width="1"/></svg></div><span class="furn-label">Folding Table 72&#8243;&times;30&#8243;</span><button class="furn-add" tabindex="-1" data-place="table-black">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="28" height="11" viewBox="0 0 28 11"><rect width="28" height="11" rx="1" fill="#f0f0f0" stroke="#666" stroke-width="1"/></svg></div><span class="furn-label">Event Table 72&#8243;&times;30&#8243;</span><button class="furn-add" tabindex="-1" data-place="table-white">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="24" height="10" viewBox="0 0 24 10"><rect width="24" height="10" rx="1" fill="#8a6a2a" stroke="#c0982a" stroke-width="1"/></svg></div><span class="furn-label">CR Table 59.5&#8243;&times;23.5&#8243;</span><button class="furn-add" tabindex="-1" data-place="table-cr">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="12" height="10" viewBox="0 0 12 10"><rect width="12" height="10" rx="1" fill="#4a3a6a" stroke="#8060c0" stroke-width="1"/><polygon points="6,2 4,8 8,8" fill="#8060c0"/></svg></div><span class="furn-label">Podium 27.5&#8243;&times;23.5&#8243;</span><button class="furn-add" tabindex="-1" data-place="podium">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2d5a1b" stroke="#4a8a2a" stroke-width="1"/><circle cx="8" cy="8" r="3" fill="#3a7a22"/></svg></div><span class="furn-label">Fern 18&#8243; dia.</span><button class="furn-add" tabindex="-1" data-place="fern">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#bf0a30" stroke="#002868" stroke-width="1.5"/><text x="7" y="10" text-anchor="middle" font-size="6" fill="white" font-family="sans-serif">US</text></svg></div><span class="furn-label">US Flag 12&#8243; dia.</span><button class="furn-add" tabindex="-1" data-place="flag-us">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#bf0a30" stroke="#002868" stroke-width="1.5"/><text x="7" y="10" text-anchor="middle" font-size="6" fill="white" font-family="sans-serif">TX</text></svg></div><span class="furn-label">TX Flag 12&#8243; dia.</span><button class="furn-add" tabindex="-1" data-place="flag-tx">+</button></div>
+          <div class="furn-row"><div class="furn-icon"><svg width="28" height="14" viewBox="0 0 28 14"><rect x="0" y="0" width="28" height="3" fill="none" stroke="#555" stroke-width="1"/><path d="M 0 3 C 3.5,10 10.5,3 14,3 C 17.5,10 24.5,3 28,3 L 28,10 L 0,10 Z" fill="#111" stroke="#000" stroke-width="0.8"/></svg></div><span class="furn-label">Rolling Curtain (8 ft)</span><button class="furn-add" tabindex="-1" data-place="curtain">+</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEM COUNT -->
+    <div class="card">
+      <div class="section-head collapsed" data-target="count-body" class="section-head collapsed">&mdash; Item Count &mdash;<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="count-body">
+        <div class="count-grid" id="item-count-panel" style="padding-top:2px"></div>
+      </div>
+    </div>
+
+    <!-- EXPORT (moved from left panel) -->
+    <div class="card" id="export-card" style="display:none">
+      <div class="section-head collapsed" data-target="export-body" class="section-head collapsed">— Export —<span class="sh-arrow">&#9660;</span></div>
+      <div class="card-body collapsed" id="export-body">
+        <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px">
+          <div class="hint">Exported files: diagram + stats only.</div>
+          <button class="exp-btn" id="btn-html">⬇ Download HTML<span>Open in any browser</span></button>
+          <button class="exp-btn" id="btn-svg">⬇ Download SVG<span>Vector diagram only</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ROOM_W=996,ROOM_H=1728,MARGIN_X=52,RAMP_W=96,RAMP_HALF=48,RAMP_TOP_H=48,RAMP_EXT=60;
+const CHAIR_W=19.5,CHAIR_D=24,AVL_W=96,AVL_D=48;
+const MCOL="#7ab0e0",MFS=13,RLF=15,RE=MARGIN_X+ROOM_W;
+const VENUE="Opportunity Central Arena";
+const F="system-ui, Arial, sans-serif";
+
+// ── State ──────────────────────────────────────────────────────────────────
+const S={
+  swFt:44,sdFt:24,bwFt:8,faFt:6,
+  ramps:true,cam:true,
+  rows:24,cps:17,rowGap:18,
+  hasCtr:true,caIn:96,
+  adults:"both",clip:1,
+  avlN:0,avlSide:"left",
+  rowLabels:"alpha",
+  title:"Forney HS Ceremony Ground Plan",date:""
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function rowLabel(i){if(S.rowLabels==="num")return String(i+1);return String.fromCharCode(65+(i%26)).repeat(Math.floor(i/26)+1);}
+function ftIn(px){
+  const t=Math.abs(px),ft=Math.floor(t/12),ins=+(t-ft*12).toFixed(2);
+  if(ins<0.05)return ft+" ft";
+  if(Math.abs(ins-Math.round(ins))<0.1)return ft+" ft "+Math.round(ins)+" in";
+  return ft+" ft "+ins.toFixed(1)+" in";
+}
+
+// ── Geometry ───────────────────────────────────────────────────────────────
+function computeGeo(){
+  const SW=S.swFt*12,SH=S.sdFt*12,BH=S.bwFt*12,FI=S.faFt*12;
+  const ST_Y=BH,ST_X=MARGIN_X+(ROOM_W-SW)/2,SBOT=ST_Y+SH;
+  const RL_X=ST_X-RAMP_W,RR_X=ST_X+SW;
+  const RPLAT_Y=ST_Y-24,RSPL=ST_Y+24,RIN=SBOT-RSPL,ROUT=RIN+RAMP_EXT,RBOT=SBOT+RAMP_EXT;
+  const ATOP=S.ramps?RBOT:SBOT,SY0=ATOP+FI;
+  const DWR=(ROOM_W-SW-2*RAMP_W)/2,DWN=(ROOM_W-SW)/2;
+  const DW=S.ramps?DWR:DWN,DLX2=S.ramps?RL_X:ST_X,DRX1=S.ramps?RR_X+RAMP_W:ST_X+SW;
+  return{SW,SH,BH,FI,ST_Y,ST_X,SBOT,RL_X,RR_X,RPLAT_Y,RSPL,RIN,ROUT,RBOT,ATOP,SY0,DWR,DW,DLX2,DRX1,DIMY:ST_Y+22};
+}
+
+function calcLayout(geo){
+  const N=Math.max(2,Math.round(S.cps));
+  const CA=S.hasCtr?Math.max(0,Math.round(S.caIn)):0;
+  const GAP=Math.max(0,S.rowGap),PITCH=CHAIR_D+GAP;
+  const clip=S.clip;
+  // Main row geometry — NEVER affected by first-row counts
+  const SEC_W=S.hasCtr?N*CHAIR_W+(N-1)*clip:2*N*CHAIR_W+(2*N-1)*clip;
+  const SA_W=S.hasCtr?(ROOM_W-2*SEC_W-CA)/2:(ROOM_W-SEC_W)/2;
+  const LS_X=MARGIN_X+SA_W;
+  const CA_X=S.hasCtr?LS_X+SEC_W:null;
+  const RS_X=S.hasCtr?CA_X+CA:null;
+  const RA_X=S.hasCtr?RS_X+SEC_W:null;
+  // Different first rows — counts only, geometry handled in SVG per-row
+  const dfr=S.diffFirstRows&&S.rows>0;
+  const fr1N=dfr?Math.max(1,Math.round(S.fr1cps)):N;
+  const fr2N=(dfr&&S.rows>1)?Math.max(1,Math.round(S.fr2cps)):N;
+  const secW=(n)=>S.hasCtr?n*CHAIR_W+(n-1)*clip:2*n*CHAIR_W+(2*n-1)*clip;
+  const FR1_SEC_W=secW(fr1N);
+  const FR2_SEC_W=secW(fr2N);
+  const MA=S.midAisle&&S.midAisleAfter>0&&S.midAisleAfter<S.rows;
+  const MA_DEPTH=MA?Math.max(12,S.midAisleDepth*12):0; // px
+  const MA_AFTER=MA?Math.min(S.midAisleAfter,S.rows-1):0;
+  const SEAT_H=S.rows*PITCH+MA_DEPTH,REAR_Y=geo.SY0+SEAT_H,REAR_H=ROOM_H-REAR_Y;
+  const MA_Y=MA?geo.SY0+MA_AFTER*PITCH:null; // top of mid-aisle = bottom of row (MA_AFTER-1)
+  const SEAT_W=S.hasCtr?SEC_W*2+CA:SEC_W;
+  const cpr=N*2,fr1cpr=fr1N*2,fr2cpr=fr2N*2;
+  // Total chairs: first 2 rows may differ
+  const chairs=(dfr&&S.rows>=1?fr1cpr:cpr)+(dfr&&S.rows>=2?fr2cpr:dfr?0:cpr)+cpr*Math.max(0,S.rows-(dfr?Math.min(2,S.rows):0));
+  const apr=S.adults==="both"?2:S.adults==="none"?0:1;
+  const adults=apr*S.rows,students=chairs-adults;
+  const errors=[],warnings=[];
+  if(S.rows<1)errors.push("Need at least 1 row.");
+  if(N<2)errors.push("Need at least 2 chairs per side.");
+  if(geo.DWR<0)errors.push("Stage too wide for ramps — narrow stage or turn ramps off.");
+  if(SA_W<24)errors.push("Side aisles would be "+ftIn(SA_W)+" — minimum 2 ft.");
+  else if(SA_W<72)warnings.push("Side aisles are "+ftIn(SA_W)+" — recommend 6 ft.");
+  if(S.hasCtr&&CA<24)errors.push("Center aisle "+ftIn(CA)+" — minimum 2 ft.");
+  else if(S.hasCtr&&CA<72)warnings.push("Center aisle "+ftIn(CA)+" — recommend 6 ft.");
+  if(REAR_H<24)errors.push("Too many rows — rear aisle "+ftIn(REAR_H)+". Min 2 ft.");
+  else if(REAR_H<120)warnings.push("Rear aisle "+ftIn(REAR_H)+" — recommend 10 ft.");
+  if(GAP<12)warnings.push('Row gap '+GAP+'" — recommend 12".');
+  return{N,fr1N,fr2N,dfr,CA,clip,SEC_W,FR1_SEC_W,FR2_SEC_W,SA_W,rows:S.rows,hasCtr:S.hasCtr,adultSide:S.adults,PITCH,GAP,SEAT_H,REAR_Y,REAR_H,SEAT_W,LS_X,CA_X,RS_X,RA_X,cpr,fr1cpr,fr2cpr,chairs,adults,students,MA,MA_DEPTH,MA_AFTER,MA_Y,errors,warnings,valid:errors.length===0};
+}
+function getAVL(L){
+  if(!S.avlN||!L.valid)return[];
+  const y=L.REAR_Y;
+  if(L.hasCtr){
+    const lI={x:L.CA_X-AVL_W,y},lO={x:L.CA_X-AVL_W*2,y};
+    const rI={x:L.RS_X,y},rO={x:L.RS_X+AVL_W,y};
+    const[pri,sec]=S.avlSide==='left'?[[lI,lO],[rI,rO]]:[[rI,rO],[lI,lO]];
+    return[pri[0],pri[1],sec[0],sec[1]].slice(0,S.avlN);
+  }
+  const tot=S.avlN*AVL_W,sx=MARGIN_X+(ROOM_W-tot)/2;
+  return Array.from({length:S.avlN},(_,i)=>({x:sx+i*AVL_W,y}));
+}
+
+
+// v2 globals
+const SNAP_PX=2;
+const ITEM_REGISTRY={
+  'chair-furn':{label:'Chair',        w:19.5, h:24,   shape:'rect',    fill:'#1a5fa8',stroke:'#4a8ad8',rx:2},
+  'table-black':{label:'Folding Table', w:72,   h:30,   shape:'rect',    fill:'#2d2d2d',stroke:'#555555',rx:1},
+  'table-white':{label:'Event Table', w:72,   h:30,   shape:'rect',    fill:'#f0f0f0',stroke:'#444444',rx:1},
+  'table-cr':   {label:'CR Table',    w:59.5, h:23.5, shape:'rect',    fill:'#8a6a2a',stroke:'#c0982a',rx:1},
+  'podium':     {label:'Podium',      w:27.5, h:23.5, shape:'rect',    fill:'#4a3a6a',stroke:'#8060c0',rx:2},
+  'fern':       {label:'Fern',        w:18,   h:18,   shape:'circle',  fill:'#2d5a1b',stroke:'#4a8a2a'},
+  'flag-us':    {label:'US Flag',     w:12,   h:12,   shape:'flag-us', fill:'#bf0a30',stroke:'#002868'},
+  'flag-tx':    {label:'TX Flag',     w:12,   h:12,   shape:'flag-tx', fill:'#bf0a30',stroke:'#002868'},
+  'curtain':    {label:'Rolling Curtain',w:96,   h:43,   shape:'curtain', fill:'#111111',stroke:'#ffffff'},
+};
+const DV={'dv-room-w':true,'dv-room-h':true,'dv-back-wall-lbl':true,'dv-stage-lbl':true,'dv-ramp-lbl':true,'dv-deadzone':true,'dv-front-aisle-dim':true,'dv-aisle-labels':true,'dv-aisle-meas':true,'dv-rear-aisle-dim':true,'dv-avl-lbl':true,'dv-cam-lbl':true,'dv-mid-aisle-lbl':true,'dv-mid-aisle-dim':true};
+function vis(k){return DV[k]!==false;}
+const DV_ALL=Object.keys(DV);
+const DV_LABELS=['dv-back-wall-lbl','dv-stage-lbl','dv-ramp-lbl','dv-aisle-labels','dv-avl-lbl','dv-cam-lbl','dv-mid-aisle-lbl'];
+const DV_DIMS=['dv-room-w','dv-room-h','dv-deadzone','dv-front-aisle-dim','dv-aisle-meas','dv-rear-aisle-dim','dv-mid-aisle-dim'];
+let furnitureItems={},measureLines=[],interactionMode='select';
+const selection=new Set();let lastPlaced={};
+const _H={past:[],future:[]};
+function snapshot(){_H.past.push(JSON.stringify({items:furnitureItems,lines:measureLines}));_H.future=[];if(_H.past.length>80)_H.past.shift();}
+function undo(){if(!_H.past.length)return;_H.future.push(JSON.stringify({items:furnitureItems,lines:measureLines}));const st=JSON.parse(_H.past.pop());furnitureItems=st.items;measureLines=st.lines;selection.clear();renderFurniture();renderSelectionLayer();renderMeasureLines();updateCountPanel();}
+function redo(){if(!_H.future.length)return;_H.past.push(JSON.stringify({items:furnitureItems,lines:measureLines}));const st=JSON.parse(_H.future.pop());furnitureItems=st.items;measureLines=st.lines;selection.clear();renderFurniture();renderSelectionLayer();renderMeasureLines();updateCountPanel();}
+function snap(v){return Math.round(v/SNAP_PX)*SNAP_PX;}
+function svgPt(svgEl,e){const pt=svgEl.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svgEl.getScreenCTM().inverse());}
+function uid(){return 'i'+Date.now()+Math.random().toString(36).slice(2,6);}
+
+// ── SVG ────────────────────────────────────────────────────────────────────
+function makeSVG(geo,L,avlPos){
+  const p=[];const add=s=>p.push(s);
+  const rct=(x,y,w,h,fill,stroke,sw,rx)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke||'none'}" stroke-width="${sw||1}" rx="${rx||0}"/>`;
+  const txt=(x,y,s,sz,fill,anchor,wt)=>`<text x="${x}" y="${y}" font-size="${sz}" fill="${fill}" text-anchor="${anchor||'middle'}" dominant-baseline="middle" font-family="${F}" font-weight="${wt||400}">${s}</text>`;
+  const ln=(x1,y1,x2,y2,col,sw,dash)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${sw||1}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+  const dimH=(x1,x2,y,lbl,col,fs)=>{
+    col=col||MCOL;fs=fs||MFS;if(x2<=x1+4)return'';
+    const mid=(x1+x2)/2,pw=lbl.length*fs*0.54+12;
+    return ln(x1,y,x2,y,col)+ln(x1,y-6,x1,y+6,col)+ln(x2,y-6,x2,y+6,col)+rct(mid-pw/2,y-fs/2-3,pw,fs+6,'#0e1320')+txt(mid,y,lbl,fs,col,'middle',600);
+  };
+  const dimV=(x,y1,y2,lbl,col,fs)=>{
+    col=col||MCOL;fs=fs||MFS;if(y2<=y1+4)return'';
+    const mid=(y1+y2)/2,pw=lbl.length*fs*0.54+12;
+    return ln(x,y1,x,y2,col)+ln(x-6,y1,x+6,y1,col)+ln(x-6,y2,x+6,y2,col)+rct(x-fs/2-3,mid-pw/2,fs+6,pw,'#0e1320')+`<text x="${x}" y="${mid}" font-size="${fs}" fill="${col}" text-anchor="middle" dominant-baseline="middle" font-family="${F}" font-weight="600" transform="rotate(-90,${x},${mid})">${lbl}</text>`;
+  };
+  const aisleLabel=(x1,x2,name,meas)=>{
+    if(x2<=x1+16)return'';
+    const mid=(x1+x2)/2,top=geo.ATOP,h=Math.max(geo.FI,28);
+    let out='';
+    if(vis('dv-aisle-labels')) out+=txt(mid,top+h*0.24,name,10,'#e8f0ff','middle',700)+txt(mid,top+h*0.55,meas,MFS,'#c0d8f0','middle',600);
+    if(vis('dv-aisle-meas'))   out+=ln(x1+2,top+h*0.82,x2-2,top+h*0.82,MCOL,1.2)+ln(x1+2,top+h*0.74,x1+2,top+h*0.90,MCOL,1.2)+ln(x2-2,top+h*0.74,x2-2,top+h*0.90,MCOL,1.2);
+    return out;
+  };
+
+  add(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -30 1080 ${ROOM_H+30}" style="width:100%;height:auto;display:block;">`);
+  add(`<defs><linearGradient id="sG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2e5488"/><stop offset="100%" stop-color="#1c3a60"/></linearGradient></defs>`);
+  add(rct(0,-30,1080,ROOM_H+60,'#0c1018'));
+  for(let gx=MARGIN_X;gx<=RE;gx+=48)add(ln(gx,-30,gx,ROOM_H,'#13192a',0.45));
+  for(let gy=0;gy<=ROOM_H;gy+=48)add(ln(MARGIN_X,gy,RE,gy,'#13192a',0.45));
+  add(rct(MARGIN_X,0,ROOM_W,ROOM_H,'none','#2e4a6a',2));
+  add(rct(MARGIN_X,0,ROOM_W,geo.ST_Y,'#0d1828','#1e3450',1));
+  if(vis('dv-back-wall-lbl')){add(txt(MARGIN_X+ROOM_W/2,geo.ST_Y/2-(S.ramps&&geo.BH>30?8:0),"BACK WALL BUFFER (STAGE) — "+ftIn(geo.BH),MFS,'#4a7aaa'));if(S.ramps&&geo.BH>24)add(txt(MARGIN_X+ROOM_W/2,geo.ST_Y/2+(S.ramps&&geo.BH>30?8:0),"RAMP TO WALL — "+ftIn(geo.BH-24),MFS,'#3a6a8a'));}
+  // Stage with 4x8 ft grid (48px wide, 96px tall)
+  add(rct(geo.ST_X,geo.ST_Y,geo.SW,geo.SH,'url(#sG)','#4a7abf',2));
+  {
+    const gx=48,gy=96; // 4ft, 8ft in px
+    for(let x=geo.ST_X+gx;x<geo.ST_X+geo.SW;x+=gx)
+      add(ln(x,geo.ST_Y,x,geo.ST_Y+geo.SH,'#0d1f3a',1.2));
+    for(let y=geo.ST_Y+gy;y<geo.ST_Y+geo.SH;y+=gy)
+      add(ln(geo.ST_X,y,geo.ST_X+geo.SW,y,'#0d1f3a',1.2));
+  }
+  const stSz=Math.min(20,Math.max(10,geo.SW/26));
+  if(vis('dv-stage-lbl')){add(txt(geo.ST_X+geo.SW/2,geo.ST_Y+geo.SH/2-(geo.SH>50?10:0),'S T A G E',stSz,'#8ab8e8','middle',700));if(geo.SH>50)add(txt(geo.ST_X+geo.SW/2,geo.ST_Y+geo.SH/2+12,S.swFt+' ft wide × '+S.sdFt+' ft deep',MFS,'#5a88b8','middle',500));}
+
+  if(S.ramps&&geo.RIN>0){
+    [[geo.RL_X,'L'],[geo.RR_X,'R']].forEach(function(pair){
+      const rx=pair[0],side=pair[1];
+      const inX=side==='L'?rx+RAMP_HALF:rx;   // inner half (stage side, 4ft wide)
+      const outX=side==='L'?rx:rx+RAMP_HALF;  // outer half (away from stage, 4ft wide)
+      const WALK=96; // 8ft walk-on zone at south of inner half
+      const walkTop=geo.SBOT-WALK;
+      const aboveWalk=Math.max(0,walkTop-geo.RSPL);
+
+      // Top landing platform
+      add(rct(rx,geo.RPLAT_Y,RAMP_W,RAMP_TOP_H,'#1c3a5c','#3a6a8a',1.5));
+      // Dashed split line between platform and ramp body
+      add(ln(rx,geo.RSPL,rx+RAMP_W,geo.RSPL,'#3a6a8a',1,'5,4'));
+
+      // Inner half above walk-on (ramp color)
+      if(aboveWalk>0)
+        add(rct(inX,geo.RSPL,RAMP_HALF,aboveWalk,'#18324e','#2e5a7a',1));
+
+      // Walk-on zone — stage color, seamless with inner half above
+      add(rct(inX,walkTop,RAMP_HALF,WALK,'#1e3a5c','#2e5a7a',1));
+
+      // Outer half (full height including floor extension)
+      add(rct(outX,geo.RSPL,RAMP_HALF,geo.ROUT,'#1c3a5c','#3a6a8a',1.5));
+
+      if(vis('dv-ramp-lbl'))add(txt(rx+RAMP_W/2,geo.RPLAT_Y+RAMP_TOP_H/2,'RAMP '+side,11,'#6a9aba','middle',700));
+    });
+  }
+  if(geo.DW>4&&vis('dv-deadzone')){add(dimH(MARGIN_X,geo.DLX2,geo.DIMY,ftIn(geo.DW)));add(dimH(geo.DRX1,RE,geo.DIMY,ftIn(geo.DW)));}
+
+  add(rct(MARGIN_X,geo.ATOP,ROOM_W,geo.FI,'#091420','#18304a',0.8));
+  if(geo.FI>8&&vis('dv-front-aisle-dim')){const fa=ftIn(geo.FI);add(dimV(geo.ST_X+geo.SW/3,geo.ATOP,geo.SY0,fa));add(dimV(geo.ST_X+geo.SW*2/3,geo.ATOP,geo.SY0,fa));}
+
+  if(L.hasCtr){
+    add(aisleLabel(MARGIN_X,L.LS_X,'LEFT AISLE',ftIn(L.SA_W)));
+    add(aisleLabel(L.CA_X,L.RS_X,'CENTER AISLE',ftIn(L.CA)));
+    add(aisleLabel(L.RA_X,RE,'RIGHT AISLE',ftIn(L.SA_W)));
+  }else{
+    add(aisleLabel(MARGIN_X,L.LS_X,'LEFT AISLE',ftIn(L.SA_W)));
+    add(aisleLabel(L.LS_X+L.SEC_W,RE,'RIGHT AISLE',ftIn(L.SA_W)));
+  }
+
+  const S0=geo.SY0;
+  // When mid-aisle is active, split seating backgrounds into top and bottom halves
+  function seatRects(x,y,w,fill,stroke,sw){
+    if(L.MA&&L.MA_Y!==null){
+      const topH=L.MA_Y-y;
+      const botY=L.MA_Y+L.MA_DEPTH;
+      const botH=(y+L.SEAT_H)-botY;
+      add(rct(x,y,w,topH,fill,stroke,sw));
+      add(rct(x,botY,w,botH,fill,stroke,sw));
+    }else{
+      add(rct(x,y,w,L.SEAT_H,fill,stroke,sw));
+    }
+  }
+  if(L.hasCtr){
+    seatRects(MARGIN_X,S0,L.SA_W,'#0e2234','#1e3a54',0.5);
+    seatRects(L.CA_X,S0,L.CA,'#0e2234','#1e3a54',0.5);
+    seatRects(L.RA_X,S0,L.SA_W,'#0e2234','#1e3a54',0.5);
+    seatRects(L.LS_X,S0,L.SEC_W,'#0b1622','none',0);
+    seatRects(L.RS_X,S0,L.SEC_W,'#0b1622','none',0);
+  }else{
+    seatRects(MARGIN_X,S0,L.SA_W,'#0e2234','#1e3a54',0.5);
+    seatRects(L.LS_X+L.SEC_W,S0,L.SA_W,'#0e2234','#1e3a54',0.5);
+    seatRects(L.LS_X,S0,L.SEC_W,'#0b1622','none',0);
+  }
+
+  // Mid-section aisle zone
+  if(L.MA&&L.MA_Y!==null){
+    const MAW=L.hasCtr?L.MAX_SEC_W*2+L.CA:L.MAX_SEC_W;
+    const MAX=L.LS_X+(L.hasCtr?0:0); // left edge of seating field
+    add(rct(MARGIN_X,L.MA_Y,ROOM_W,L.MA_DEPTH,'#091420','#18304a',0.8));
+    // Label + measurement
+    if(vis('dv-mid-aisle-lbl')){
+      const mid=MARGIN_X+ROOM_W/2,h=Math.max(L.MA_DEPTH,20);
+      add(txt(mid,L.MA_Y+h*0.28,'MID AISLE',10,'#e8f0ff','middle',700));
+      add(txt(mid,L.MA_Y+h*0.62,ftIn(L.MA_DEPTH),MFS,'#c0d8f0','middle',600));
+    }
+    if(vis('dv-mid-aisle-dim')){
+      add(dimV(RE+14,L.MA_Y,L.MA_Y+L.MA_DEPTH,ftIn(L.MA_DEPTH)));
+    }
+  }
+  // Per-row N: rows 0 and 1 may differ when dfr is active
+  function rowN(row){return L.dfr&&row===0?L.fr1N:L.dfr&&row===1?L.fr2N:L.N;}
+  function rowSecW(row){return L.dfr&&row===0?L.FR1_SEC_W:L.dfr&&row===1?L.FR2_SEC_W:L.SEC_W;}
+  function isAdult(c,side,rN){
+    if(L.adultSide==="none")return false;
+    if(L.hasCtr){
+      if(L.adultSide==="both")return(side==="L"&&c===0)||(side==="R"&&c===rN-1);
+      if(L.adultSide==="left")return side==="L"&&c===0;
+      if(L.adultSide==="right")return side==="R"&&c===rN-1;
+    }else{
+      const tot=rN*2;
+      if(L.adultSide==="both")return c===0||c===tot-1;
+      if(L.adultSide==="left")return c===0;
+      if(L.adultSide==="right")return c===tot-1;
+    }
+    return false;
+  }
+  // Center of the seating field (used for no-center-aisle centering)
+  const SEAT_CENTER=MARGIN_X+ROOM_W/2;
+  for(let row=0;row<L.rows;row++){
+    const rN=rowN(row),rSW=rowSecW(row);
+    const maOff=L.MA&&row>=L.MA_AFTER?L.MA_DEPTH:0;
+    const ry=S0+row*L.PITCH+maOff,ct=ry+L.GAP,lbl=rowLabel(row);
+    const lsz=lbl.length>2?Math.max(7,RLF-(lbl.length-1)*3):RLF;
+    // Row separator line (use main SEC_W for rows >2, per-row width for first rows)
+    if(row>0){
+      const sepW=rowSecW(row);
+      if(L.hasCtr){
+        // Left section separator — right-anchored to CA_X
+        add(ln(L.CA_X-rowSecW(row),ry,L.CA_X,ry,'#0e1a2c',0.5));
+        add(ln(L.RS_X,ry,L.RS_X+rowSecW(row),ry,'#0e1a2c',0.5));
+      }else{
+        const rowLsX=SEAT_CENTER-rSW/2;
+        add(ln(rowLsX,ry,rowLsX+rSW,ry,'#0e1a2c',0.5));
+      }
+    }
+    if(L.hasCtr){
+      // Row label in center aisle
+      add(txt(L.CA_X+L.CA/2,ct+CHAIR_D/2,lbl,lsz,'#e8f0ff','middle',700));
+      // Left section: right-anchor to center aisle (CA_X), grow leftward
+      // chair 0 is outermost (adult), chair rN-1 is innermost (against CA_X)
+      for(let c=0;c<rN;c++){
+        const a=isAdult(c,"L",rN);
+        const cx=L.CA_X-(rN-c)*(CHAIR_W+L.clip)+L.clip+0.75;
+        add(rct(cx,ct+2,CHAIR_W-1.5,CHAIR_D-4,a?'#8a5c10':'#154e8a',a?'#d4920a':'#2a7acc',0.6,1.5));
+      }
+      // Right section: left-anchor at RS_X, grow rightward
+      // chair 0 is innermost (against RS_X), chair rN-1 is outermost (adult)
+      for(let c=0;c<rN;c++){
+        const a=isAdult(c,"R",rN);
+        add(rct(L.RS_X+c*(CHAIR_W+L.clip)+0.75,ct+2,CHAIR_W-1.5,CHAIR_D-4,a?'#8a5c10':'#154e8a',a?'#d4920a':'#2a7acc',0.6,1.5));
+      }
+    }else{
+      // No center aisle: center the row block around SEAT_CENTER
+      const rowLsX=SEAT_CENTER-rSW/2;
+      add(`<text x="${rowLsX-6}" y="${ct+CHAIR_D/2}" font-size="${lsz}" fill="#e8f0ff" text-anchor="end" dominant-baseline="middle" font-family="${F}" font-weight="700">${lbl}</text>`);
+      const tot=rN*2;
+      for(let c=0;c<tot;c++){
+        const a=isAdult(c,"M",rN);
+        add(rct(rowLsX+c*(CHAIR_W+L.clip)+0.75,ct+2,CHAIR_W-1.5,CHAIR_D-4,a?'#8a5c10':'#154e8a',a?'#d4920a':'#2a7acc',0.6,1.5));
+      }
+    }
+  }
+  add(rct(MARGIN_X,L.REAR_Y,ROOM_W,L.REAR_H,'#0c1d2e','#1e3550',0.8));
+  avlPos.forEach(function(pos){
+    add(rct(pos.x,pos.y,AVL_W,AVL_D,'#1e1208','#c87820',1.5,2));
+    if(vis('dv-avl-lbl')){add(txt(pos.x+AVL_W/2,pos.y+AVL_D/2-7,'AVL',11,'#e8a040','middle',700));add(txt(pos.x+AVL_W/2,pos.y+AVL_D/2+8,'8×4 ft',10,'#a06820','middle',500));}
+  });
+  if(S.cam){
+    const cy=Math.max(L.REAR_Y+6,ROOM_H-56),cx=MARGIN_X+(ROOM_W-72)/2;
+    add(rct(cx,cy,72,48,'#1a2e10','#5a9a30',1.5,2));
+    if(vis('dv-cam-lbl')){add(txt(cx+36,cy+17,'CAM',MFS,'#7aba50','middle',700));add(txt(cx+36,cy+31,'6×4 ft',MFS,'#5a8a40','middle',500));}
+  }
+  if(vis('dv-rear-aisle-dim'))add(dimV(MARGIN_X+L.SA_W/2,L.REAR_Y,ROOM_H,ftIn(L.REAR_H)));
+  if(vis('dv-room-w'))add(dimH(MARGIN_X,RE,-16,'83 ft TOTAL','#aad4f0',13));
+  if(vis('dv-room-h'))add(dimV(RE+26,0,ROOM_H,'144 ft','#aad4f0',13));
+  // Scale bar — bottom right, 10 ft = 120px
+  const SBX=RE-144,SBY=ROOM_H-22,SBW=120,SBH=6;
+  add(`<rect x="${SBX}" y="${SBY}" width="${SBW}" height="${SBH}" fill="#7ab0e0" rx="1"/>`);
+  add(`<rect x="${SBX}" y="${SBY}" width="${SBW/2}" height="${SBH}" fill="#0e1320" rx="1"/>`);
+  add(`<rect x="${SBX}" y="${SBY}" width="${SBW/2}" height="${SBH}" fill="#7ab0e0" rx="1" opacity="0"/>`);
+  // tick marks and label
+  for(let t=0;t<=SBW;t+=SBW/2)add(`<line x1="${SBX+t}" y1="${SBY}" x2="${SBX+t}" y2="${SBY-4}" stroke="#7ab0e0" stroke-width="1"/>`);
+  add(`<text x="${SBX}" y="${SBY-6}" font-size="8" fill="#7ab0e0" text-anchor="start" font-family="${F}">0</text>`);
+  add(`<text x="${SBX+SBW/2}" y="${SBY-6}" font-size="8" fill="#7ab0e0" text-anchor="middle" font-family="${F}">5 ft</text>`);
+  add(`<text x="${SBX+SBW}" y="${SBY-6}" font-size="8" fill="#7ab0e0" text-anchor="end" font-family="${F}">10 ft</text>`);
+  add(`<text x="${MARGIN_X+4}" y="${ROOM_H-8}" font-size="9" fill="#1e3450" text-anchor="start" dominant-baseline="auto" font-family="${F}">Developed by: Holden W.</text>`);
+  add(`<g id="layer-furniture"></g>`);
+  add(`<g id="layer-measures"></g>`);
+  add(`<g id="layer-select"></g>`);
+  add('</svg>');
+  return p.join('');
+}
+
+
+// v2: Furniture rendering
+function renderItemSVG(item,forExport){
+  const reg=ITEM_REGISTRY[item.type];
+  const cx=item.x+reg.w/2,cy=item.y+reg.h/2;
+  const tf=item.rotation?`transform="rotate(${item.rotation},${cx},${cy})"`:'' ;
+  const sel=(!forExport)&&selection.has(item.id);
+  const ovlp=(!forExport)&&isOverlapping(item);
+  const attrs=`data-id="${item.id}" ${tf} style="cursor:${item.locked?'default':'grab'}"`;
+  let inner='';
+  if(reg.shape==='circle'){
+    inner=`<circle cx="${cx}" cy="${cy}" r="${reg.w/2}" fill="${ovlp?'#8a1a1a':reg.fill}" stroke="${sel?'#fff':reg.stroke}" stroke-width="${sel?2:1}" ${attrs}/>`;
+    if(item.type==='fern')inner+=`<circle cx="${cx}" cy="${cy}" r="${reg.w/4}" fill="${ovlp?'#8a1a1a':'#3a7a22'}" pointer-events="none"/>`;
+  }else if(reg.shape==='flag-us'){
+    inner=`<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${reg.w/2}" fill="${ovlp?'#8a1a1a':'#bf0a30'}" stroke="${sel?'#fff':'#002868'}" stroke-width="${sel?2:1.5}"/><text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" font-size="${reg.w*0.55}" font-family="${F}" font-weight="700" fill="white" pointer-events="none">US</text></g>`;
+  }else if(reg.shape==='flag-tx'){
+    inner=`<g ${attrs}><circle cx="${cx}" cy="${cy}" r="${reg.w/2}" fill="${ovlp?'#8a1a1a':'#bf0a30'}" stroke="${sel?'#fff':'#002868'}" stroke-width="${sel?2:1.5}"/><text x="${cx}" y="${cy+1}" text-anchor="middle" dominant-baseline="middle" font-size="${reg.w*0.5}" font-family="${F}" font-weight="700" fill="white" pointer-events="none">TX</text></g>`;
+   }else if(reg.shape==='curtain'){
+    const battenY=item.y+15;
+    const battenH=4;
+    const wc=sel?'#ffffff':'rgba(255,255,255,0.85)', sw=sel?2:1.5;
+    const sbot=_geo?_geo.SBOT:battenY-1;
+    // Two N-S pipes, 1.5ft (18px) from each end, 15px north + 15px south of batten
+    const px1=item.x+18, px2=item.x+reg.w-18, pW=4;
+    const np1top=Math.max(battenY-15,sbot), npH=Math.max(0,battenY-np1top);
+    // Scallop curtain: row of half-circles hanging south from batten
+    // 8 half-circles across 96px = 12px radius each
+    const r2=12, n=16, diam=reg.w/n;
+    const r3=diam/2;
+    const faceY=battenY+battenH;
+    // Build scallop path: alternating half circles
+    let sp='';
+    for(let i=0;i<n;i++){
+      const lx=item.x+i*diam, rx=lx+diam, mid=lx+r3;
+      sp+=`<path d="M ${lx} ${faceY} A ${r3} ${r3} 0 0 1 ${rx} ${faceY}" fill="#0a0a0a" stroke="${wc}" stroke-width="${sw}"/>`;
+    }
+    inner=`<g ${attrs}>
+      ${npH>0?`<rect x="${px1-pW/2}" y="${np1top}" width="${pW}" height="${npH}" fill="#111" stroke="${wc}" stroke-width="${sw}"/>
+      <rect x="${px2-pW/2}" y="${np1top}" width="${pW}" height="${npH}" fill="#111" stroke="${wc}" stroke-width="${sw}"/>`:'' }
+      <rect x="${px1-pW/2}" y="${faceY}" width="${pW}" height="15" fill="#111" stroke="${wc}" stroke-width="${sw}"/>
+      <rect x="${px2-pW/2}" y="${faceY}" width="${pW}" height="15" fill="#111" stroke="${wc}" stroke-width="${sw}"/>
+      <rect x="${item.x}" y="${battenY}" width="${reg.w}" height="${battenH}" fill="#111" stroke="${wc}" stroke-width="${sw}"/>
+      ${sp}
+    </g>`;
+  }else{
+    const fc=ovlp?'#8a1a1a':reg.fill,sc=sel?'#fff':reg.stroke;
+    inner=`<g ${attrs}><rect x="${item.x}" y="${item.y}" width="${reg.w}" height="${reg.h}" fill="${fc}" stroke="${sc}" stroke-width="${sel?2:1}" rx="${reg.rx||0}"/>`;
+    if(item.type==='chair-furn')inner+=`<line x1="${item.x}" y1="${item.y+3}" x2="${item.x+4}" y2="${item.y}" stroke="${sc}" stroke-width="0.8" pointer-events="none"/>`;
+    if(item.type==='podium')inner+=`<polygon points="${cx},${item.y+4} ${item.x+4},${item.y+reg.h-4} ${item.x+reg.w-4},${item.y+reg.h-4}" fill="#8060c0" opacity="0.6" pointer-events="none"/>`;
+    if(item.type==='table-black'){inner+=`<text x="${cx}" y="${item.y+reg.h/2-5}" text-anchor="middle" dominant-baseline="middle" font-size="8" font-family="${F}" fill="#aaa" font-weight="700" pointer-events="none">Folding Table</text>`;inner+=`<text x="${cx}" y="${item.y+reg.h/2+5}" text-anchor="middle" dominant-baseline="middle" font-size="7" font-family="${F}" fill="#888" pointer-events="none">72&#x22;&times;30&#x22;</text>`;}
+    else if(item.type==='table-white'){inner+=`<text x="${cx}" y="${item.y+reg.h/2-5}" text-anchor="middle" dominant-baseline="middle" font-size="8" font-family="${F}" fill="#444" font-weight="700" pointer-events="none">Event Table</text>`;inner+=`<text x="${cx}" y="${item.y+reg.h/2+5}" text-anchor="middle" dominant-baseline="middle" font-size="7" font-family="${F}" fill="#666" pointer-events="none">72&#x22;&times;30&#x22;</text>`;}
+    else if(item.type==='table-cr')inner+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="8" font-family="${F}" fill="#e0c060" pointer-events="none">CR</text>`;
+    inner+='</g>';
+  }
+  const lockDot=(item.locked&&!forExport)?`<circle cx="${item.x+reg.w-3}" cy="${item.y+3}" r="3" fill="#d4a010" stroke="#0e1320" stroke-width="0.5" pointer-events="none"/>`:'' ;
+  return inner+lockDot;
+}
+function itemBBox(item){const r=ITEM_REGISTRY[item.type];return{x:item.x,y:item.y,w:r.w,h:r.h};}
+function bboxOverlaps(a,b){return!(a.x+a.w<=b.x||b.x+b.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y);}
+function isOverlapping(item){const ba=itemBBox(item);return Object.values(furnitureItems).some(o=>o.id!==item.id&&bboxOverlaps(ba,itemBBox(o)));}
+function getSVGEl(){return document.querySelector('#svg-container svg');}
+function renderFurniture(forExport){
+  const svg=getSVGEl();if(!svg)return'';
+  const layer=svg.getElementById('layer-furniture');if(!layer)return'';
+  const html=Object.values(furnitureItems).map(i=>renderItemSVG(i,!!forExport)).join('');
+  if(!forExport)layer.innerHTML=html;
+  return html;
+}
+function renderMeasureLines(forExport){
+  const svg=getSVGEl();if(!svg)return'';
+  const layer=svg.getElementById('layer-measures');if(!layer)return'';
+  const html=measureLines.map(ml=>{
+    const mx=(ml.x1+ml.x2)/2,my=(ml.y1+ml.y2)/2;
+    const dist=Math.hypot(ml.x2-ml.x1,ml.y2-ml.y1);const lbl=ftIn(dist);
+    const col=(ml.selected&&!forExport)?'#ffcc44':'#44ccff';
+    return`<g class="ml" data-ml-id="${ml.id}"><line x1="${ml.x1}" y1="${ml.y1}" x2="${ml.x2}" y2="${ml.y2}" stroke="${col}" stroke-width="1.5" stroke-dasharray="6,3"/><circle cx="${ml.x1}" cy="${ml.y1}" r="3" fill="${col}"/><circle cx="${ml.x2}" cy="${ml.y2}" r="3" fill="${col}"/><rect x="${mx-lbl.length*4.5}" y="${my-9}" width="${lbl.length*9}" height="16" fill="#0a1828" rx="2"/><text x="${mx}" y="${my+1}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="${col}" font-family="${F}" font-weight="600">${lbl}</text></g>`;
+  }).join('');
+  if(!forExport)layer.innerHTML=html;
+  return html;
+}
+function renderSelectionLayer(){
+  const svg=getSVGEl();if(!svg)return;
+  const layer=svg.getElementById('layer-select');if(!layer)return;
+  let html='';
+  selection.forEach(id=>{
+    const item=furnitureItems[id];if(!item)return;
+    const reg=ITEM_REGISTRY[item.type];const cx=item.x+reg.w/2,cy=item.y+reg.h/2;const pad=4;
+    html+=`<rect x="${item.x-pad}" y="${item.y-pad}" width="${reg.w+pad*2}" height="${reg.h+pad*2}" fill="none" stroke="#fff" stroke-width="1.5" stroke-dasharray="5,3" rx="3" transform="rotate(${item.rotation},${cx},${cy})" pointer-events="none"/>`;
+  });
+  layer.innerHTML=html;
+}
+function updateCountPanel(){
+  const counts={};Object.values(furnitureItems).forEach(i=>{counts[i.type]=(counts[i.type]||0)+1;});
+  const panel=document.getElementById('item-count-panel');if(!panel)return;
+  panel.innerHTML=Object.entries(ITEM_REGISTRY).map(([type,reg])=>`<div class="count-cell"><span class="count-label">${reg.label}</span><span class="count-val">${counts[type]||0}</span></div>`).join('');
+}
+function nextSafePos(type){
+  const reg=ITEM_REGISTRY[type];const last=lastPlaced[type];
+  let sx=last?snap(last.x+reg.w+SNAP_PX*2):MARGIN_X+SNAP_PX,sy=last?last.y:SNAP_PX*4;
+  const step=Math.max(SNAP_PX*4,Math.ceil(reg.w/SNAP_PX)*SNAP_PX);
+  for(let t=0;t<2000;t++){
+    if(sx+reg.w>MARGIN_X+ROOM_W){sx=MARGIN_X+SNAP_PX;sy=snap(sy+reg.h+SNAP_PX*2);}
+    if(sy+reg.h>ROOM_H){sx=MARGIN_X+SNAP_PX;sy=SNAP_PX*4;}
+    const cand={x:sx,y:sy,w:reg.w,h:reg.h};
+    if(!Object.values(furnitureItems).some(item=>{const r=ITEM_REGISTRY[item.type];return bboxOverlaps(cand,{x:item.x,y:item.y,w:r.w,h:r.h});}))return{x:sx,y:sy};
+    sx=snap(sx+step);
+  }
+  return{x:MARGIN_X+SNAP_PX,y:SNAP_PX*4};
+}
+function placeItem(type){
+  snapshot();const pos=nextSafePos(type);
+  const lastRot=lastPlaced[type]?lastPlaced[type].rotation:0;
+  const id=uid();const item={id,type,x:pos.x,y:pos.y,rotation:lastRot,locked:false,zIndex:Date.now()};
+  furnitureItems[id]=item;lastPlaced[type]=item;selection.clear();selection.add(id);
+  renderFurniture();renderSelectionLayer();updateCountPanel();
+}
+let _drag=null,_rubber=null,_mDrag=null,_mlDrag=null,_didMove=false,_arrowMoving=false;
+function hitTest(px,py){
+  const sorted=Object.values(furnitureItems).sort((a,b)=>b.zIndex-a.zIndex);
+  for(const item of sorted){
+    if(item.locked)continue;
+    const reg=ITEM_REGISTRY[item.type];const cx=item.x+reg.w/2,cy=item.y+reg.h/2;
+    const rad=-item.rotation*Math.PI/180;
+    const lx=Math.cos(rad)*(px-cx)-Math.sin(rad)*(py-cy)+reg.w/2;
+    const ly=Math.sin(rad)*(px-cx)+Math.cos(rad)*(py-cy)+reg.h/2;
+    if(lx>=0&&lx<=reg.w&&ly>=0&&ly<=reg.h)return item.id;
+  }
+  return null;
+}
+function hitTestML(px,py){for(const ml of measureLines){if(dSeg(px,py,ml.x1,ml.y1,ml.x2,ml.y2)<8)return ml.id;}return null;}
+function dSeg(px,py,x1,y1,x2,y2){const dx=x2-x1,dy=y2-y1;if(!dx&&!dy)return Math.hypot(px-x1,py-y1);const t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/(dx*dx+dy*dy)));return Math.hypot(px-x1-t*dx,py-y1-t*dy);}
+function snapMEnd(px,py,lockAngle,dx,dy,len){
+  // lockAngle mode: snap the anchor point, extend by fixed length+angle
+  const SR=24;let best=null,bd=SR;
+  // Object edges (midpoints of each side)
+  Object.values(furnitureItems).forEach(item=>{
+    const reg=ITEM_REGISTRY[item.type];
+    [{x:item.x,y:item.y+reg.h/2},{x:item.x+reg.w,y:item.y+reg.h/2},
+     {x:item.x+reg.w/2,y:item.y},{x:item.x+reg.w/2,y:item.y+reg.h},
+     {x:item.x,y:item.y},{x:item.x+reg.w,y:item.y},
+     {x:item.x,y:item.y+reg.h},{x:item.x+reg.w,y:item.y+reg.h}
+    ].forEach(e=>{const d=Math.hypot(px-e.x,py-e.y);if(d<bd){bd=d;best=e;}});
+  });
+  // Room wall edges
+  [{x:MARGIN_X,y:py},{x:MARGIN_X+ROOM_W,y:py},{x:px,y:0},{x:px,y:ROOM_H}].forEach(w=>{
+    const d=Math.hypot(px-w.x,py-w.y);if(d<bd){bd=d;best=w;}
+  });
+  return best||{x:snap(px),y:snap(py)};
+}
+function attachSVGEvents(){
+  const svg=getSVGEl();if(!svg)return;
+  svg.onmousedown=svgMD;svg.onmousemove=svgMM;svg.onmouseup=svgMU;svg.onmouseleave=svgML;
+}
+const _tip=document.getElementById('hover-tip');
+function showTip(html,cx,cy){if(!html){_tip.style.display='none';return;}_tip.innerHTML=html;_tip.style.display='block';_tip.style.left=(cx+14)+'px';_tip.style.top=(cy-10)+'px';}
+function svgMD(e){
+  const svg=getSVGEl();if(!svg)return;const pt=svgPt(svg,e);_didMove=false;
+  if(interactionMode==='measure'){const ep=snapMEnd(pt.x,pt.y);_mDrag={id:uid(),x1:ep.x,y1:ep.y,x2:ep.x,y2:ep.y,selected:false};e.preventDefault();return;}
+  const mlId=hitTestML(pt.x,pt.y);
+  if(mlId){
+    measureLines.forEach(ml=>ml.selected=ml.id===mlId);
+    renderMeasureLines();
+    const ml=measureLines.find(m=>m.id===mlId);
+    if(ml){_mlDrag={id:mlId,ox1:ml.x1,oy1:ml.y1,ox2:ml.x2,oy2:ml.y2,sp:pt};}
+    e.preventDefault();return;
+  }
+  const hitId=hitTest(pt.x,pt.y);
+  if(!hitId){
+    if(!e.ctrlKey){selection.clear();measureLines.forEach(ml=>ml.selected=false);renderFurniture();renderMeasureLines();}
+    _rubber={x1:pt.x,y1:pt.y,x2:pt.x,y2:pt.y};renderSelectionLayer();e.preventDefault();return;
+  }
+  if(e.ctrlKey){
+    // Ctrl+click: toggle membership
+    selection.has(hitId)?selection.delete(hitId):selection.add(hitId);
+  } else if(!selection.has(hitId)){
+    // Click on unselected item: replace selection
+    selection.clear();selection.add(hitId);
+  }
+  // If hitId is already selected (no ctrl): keep selection, start drag
+  renderSelectionLayer();
+  _drag={sp:pt,origins:{}};selection.forEach(id=>{if(furnitureItems[id]&&!furnitureItems[id].locked)_drag.origins[id]={x:furnitureItems[id].x,y:furnitureItems[id].y};});
+  e.preventDefault();
+}
+function svgMM(e){
+  const svg=getSVGEl();if(!svg)return;const pt=svgPt(svg,e);
+  if(!_drag&&!_rubber&&!_mDrag){
+    const hitId=hitTest(pt.x,pt.y);
+    const sel=[...selection].map(id=>furnitureItems[id]).filter(Boolean);
+    if(hitId&&sel.length>=2&&selection.has(hitId)){const regs=sel.map(i=>ITEM_REGISTRY[i.type]);const minX=Math.min(...sel.map(i=>i.x)),minY=Math.min(...sel.map(i=>i.y));const maxX=Math.max(...sel.map((i,idx)=>i.x+regs[idx].w)),maxY=Math.max(...sel.map((i,idx)=>i.y+regs[idx].h));showTip(`<b>${sel.length} items</b><br>${ftIn(maxX-minX)} x ${ftIn(maxY-minY)}`,e.clientX,e.clientY);}
+    else if(hitId){const item=furnitureItems[hitId];const reg=ITEM_REGISTRY[item.type];showTip(`<b>${reg.label}</b>${item.locked?' [locked]':''}<br>${ftIn(reg.w)} x ${ftIn(reg.h)}<br>From NW: ${ftIn(item.x-MARGIN_X)} E, ${ftIn(item.y)} S<br>Rot: ${item.rotation}deg`,e.clientX,e.clientY);}
+    else showTip(null);
+    return;
+  }
+  if(_mDrag){
+    const ep=snapMEnd(pt.x,pt.y);_mDrag.x2=ep.x;_mDrag.y2=ep.y;
+    const svg2=getSVGEl();const layer=svg2&&svg2.getElementById('layer-measures');if(!layer)return;
+    const dist=Math.hypot(_mDrag.x2-_mDrag.x1,_mDrag.y2-_mDrag.y1);const lbl=ftIn(dist);const mx=(_mDrag.x1+_mDrag.x2)/2,my=(_mDrag.y1+_mDrag.y2)/2;
+    const existing=measureLines.map(ml=>{const d=Math.hypot(ml.x2-ml.x1,ml.y2-ml.y1);const l=ftIn(d);const lmx=(ml.x1+ml.x2)/2,lmy=(ml.y1+ml.y2)/2;return`<g><line x1="${ml.x1}" y1="${ml.y1}" x2="${ml.x2}" y2="${ml.y2}" stroke="#44ccff" stroke-width="1.5" stroke-dasharray="6,3"/><circle cx="${ml.x1}" cy="${ml.y1}" r="3" fill="#44ccff"/><circle cx="${ml.x2}" cy="${ml.y2}" r="3" fill="#44ccff"/><rect x="${lmx-l.length*4.5}" y="${lmy-9}" width="${l.length*9}" height="16" fill="#0a1828" rx="2"/><text x="${lmx}" y="${lmy+1}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#44ccff" font-family="${F}" font-weight="600">${l}</text></g>`;}).join('');
+    layer.innerHTML=existing+`<line x1="${_mDrag.x1}" y1="${_mDrag.y1}" x2="${_mDrag.x2}" y2="${_mDrag.y2}" stroke="#ffcc44" stroke-width="1.5" stroke-dasharray="6,3"/><circle cx="${_mDrag.x1}" cy="${_mDrag.y1}" r="3" fill="#ffcc44"/><circle cx="${_mDrag.x2}" cy="${_mDrag.y2}" r="3" fill="#ffcc44"/><rect x="${mx-lbl.length*4.5}" y="${my-9}" width="${lbl.length*9}" height="16" fill="#0a1828" rx="2"/><text x="${mx}" y="${my+1}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#ffcc44" font-family="${F}" font-weight="600">${lbl}</text>`;
+    return;
+  }
+  if(_mlDrag){
+    // Translate entire measure line rigidly; snap p1 to nearby object edges
+    const rawDx=pt.x-_mlDrag.sp.x,rawDy=pt.y-_mlDrag.sp.y;
+    const len=Math.hypot(_mlDrag.ox2-_mlDrag.ox1,_mlDrag.oy2-_mlDrag.oy1);
+    const angle=Math.atan2(_mlDrag.oy2-_mlDrag.oy1,_mlDrag.ox2-_mlDrag.ox1);
+    // Try snapping p1 to nearest object edge
+    const rawP1={x:_mlDrag.ox1+rawDx,y:_mlDrag.oy1+rawDy};
+    const snapped=snapMEnd(rawP1.x,rawP1.y);
+    const snapDist=Math.hypot(snapped.x-rawP1.x,snapped.y-rawP1.y);
+    const p1=snapDist<20?snapped:rawP1;
+    const p2={x:p1.x+Math.cos(angle)*len,y:p1.y+Math.sin(angle)*len};
+    const ml=measureLines.find(m=>m.id===_mlDrag.id);
+    if(ml){ml.x1=p1.x;ml.y1=p1.y;ml.x2=p2.x;ml.y2=p2.y;}
+    renderMeasureLines();
+    return;
+  }
+  if(_rubber){_rubber.x2=pt.x;_rubber.y2=pt.y;const svg2=getSVGEl();const layer=svg2&&svg2.getElementById('layer-select');if(!layer)return;const rx=Math.min(_rubber.x1,_rubber.x2),ry=Math.min(_rubber.y1,_rubber.y2);layer.innerHTML=`<rect x="${rx}" y="${ry}" width="${Math.abs(_rubber.x2-_rubber.x1)}" height="${Math.abs(_rubber.y2-_rubber.y1)}" fill="rgba(90,160,220,0.1)" stroke="#5aa0dc" stroke-width="1" stroke-dasharray="5,3"/>`;return;}
+  if(!_drag)return;
+  const dx=snap(pt.x-_drag.sp.x),dy=snap(pt.y-_drag.sp.y);
+  if(dx||dy)_didMove=true;
+  selection.forEach(id=>{if(!_drag.origins[id])return;furnitureItems[id].x=_drag.origins[id].x+dx;furnitureItems[id].y=_drag.origins[id].y+dy;});
+  renderFurniture();renderSelectionLayer();
+}
+function svgMU(e){
+  const svg=getSVGEl();if(!svg)return;const pt=svgPt(svg,e);
+  if(_mDrag){snapshot();const ep=snapMEnd(pt.x,pt.y);_mDrag.x2=ep.x;_mDrag.y2=ep.y;if(Math.hypot(_mDrag.x2-_mDrag.x1,_mDrag.y2-_mDrag.y1)>4)measureLines.push({..._mDrag});_mDrag=null;renderMeasureLines();return;}
+  if(_mlDrag){snapshot();_mlDrag=null;return;}
+  if(_rubber){const rx=Math.min(_rubber.x1,_rubber.x2),ry=Math.min(_rubber.y1,_rubber.y2),rw=Math.abs(_rubber.x2-_rubber.x1),rh=Math.abs(_rubber.y2-_rubber.y1);Object.values(furnitureItems).forEach(item=>{if(item.locked)return;const reg=ITEM_REGISTRY[item.type];if(bboxOverlaps({x:rx,y:ry,w:rw,h:rh},{x:item.x,y:item.y,w:reg.w,h:reg.h}))selection.add(item.id);});_rubber=null;renderSelectionLayer();showTip(null);return;}
+  if(_drag){if(_didMove)snapshot();_drag=null;_didMove=false;}
+}
+function svgML(){if(_drag){snapshot();_drag=null;_didMove=false;}if(_rubber){_rubber=null;renderSelectionLayer();}if(_mDrag){_mDrag=null;renderMeasureLines();}if(_mlDrag){_mlDrag=null;}showTip(null);}
+function rotateSelection(deg){
+  if(!selection.size)return;snapshot();
+  const items=[...selection].map(id=>furnitureItems[id]).filter(Boolean);
+  if(items.length===1){items[0].rotation=(items[0].rotation+deg+360)%360;renderFurniture();renderSelectionLayer();return;}
+  const regs=items.map(i=>ITEM_REGISTRY[i.type]);const centers=items.map((item,idx)=>({x:item.x+regs[idx].w/2,y:item.y+regs[idx].h/2}));
+  const gx=centers.reduce((s,c)=>s+c.x,0)/centers.length,gy=centers.reduce((s,c)=>s+c.y,0)/centers.length;
+  const rad=deg*Math.PI/180,ca=Math.cos(rad),sa=Math.sin(rad);
+  items.forEach((item,idx)=>{const reg=regs[idx];const ox=centers[idx].x-gx,oy=centers[idx].y-gy;item.x=snap(ca*ox-sa*oy+gx-reg.w/2);item.y=snap(sa*ox+ca*oy+gy-reg.h/2);item.rotation=(item.rotation+deg+360)%360;});
+  renderFurniture();renderSelectionLayer();
+}
+function duplicateSelection(){
+  if(!selection.size)return;snapshot();
+  const items=[...selection].map(id=>furnitureItems[id]).filter(Boolean);
+  const NUDGE=snap(Math.max(...items.map(i=>ITEM_REGISTRY[i.type].w))+SNAP_PX*4);
+  const newIds=[];items.forEach(src=>{const newId=uid();furnitureItems[newId]={...src,id:newId,x:src.x+NUDGE,zIndex:Date.now()+Math.random()};newIds.push(newId);});
+  selection.clear();newIds.forEach(id=>selection.add(id));renderFurniture();renderSelectionLayer();updateCountPanel();
+}
+function deleteSelection(){
+  if(!selection.size){const s=measureLines.filter(ml=>ml.selected);if(s.length){snapshot();measureLines=measureLines.filter(ml=>!ml.selected);renderMeasureLines();}return;}
+  snapshot();selection.forEach(id=>delete furnitureItems[id]);selection.clear();renderFurniture();renderSelectionLayer();updateCountPanel();
+}
+function lockToggleSelection(){
+  if(!selection.size)return;snapshot();
+  const allLocked=[...selection].every(id=>furnitureItems[id]&&furnitureItems[id].locked);
+  selection.forEach(id=>{if(furnitureItems[id])furnitureItems[id].locked=!allLocked;});renderFurniture();renderSelectionLayer();
+}
+function alignSelection(mode){
+  const items=[...selection].map(id=>furnitureItems[id]).filter(Boolean);if(!items.length)return;snapshot();
+  const regs=items.map(i=>ITEM_REGISTRY[i.type]);
+  switch(mode){
+    case'left':  {const m=Math.min(...items.map(i=>i.x));items.forEach(i=>i.x=m);break;}
+    case'right': {const m=Math.max(...items.map((i,idx)=>i.x+regs[idx].w));items.forEach((i,idx)=>i.x=m-regs[idx].w);break;}
+    case'top':   {const m=Math.min(...items.map(i=>i.y));items.forEach(i=>i.y=m);break;}
+    case'bottom':{const m=Math.max(...items.map((i,idx)=>i.y+regs[idx].h));items.forEach((i,idx)=>i.y=m-regs[idx].h);break;}
+    case'centerH':{const m=(Math.min(...items.map(i=>i.x))+Math.max(...items.map((i,idx)=>i.x+regs[idx].w)))/2;items.forEach((i,idx)=>i.x=m-regs[idx].w/2);break;}
+    case'centerV':{const m=(Math.min(...items.map(i=>i.y))+Math.max(...items.map((i,idx)=>i.y+regs[idx].h)))/2;items.forEach((i,idx)=>i.y=m-regs[idx].h/2);break;}
+    case'distH': {if(items.length<3)return;const s=[...items].sort((a,b)=>a.x-b.x);const sr=s.map(i=>ITEM_REGISTRY[i.type]);const minX=s[0].x,maxX=s[s.length-1].x+sr[sr.length-1].w;const gap=(maxX-minX-s.reduce((t,i,idx)=>t+sr[idx].w,0))/(s.length-1);let cur=minX;s.forEach((i,idx)=>{i.x=snap(cur);cur+=sr[idx].w+gap;});break;}
+    case'distV': {if(items.length<3)return;const s=[...items].sort((a,b)=>a.y-b.y);const sr=s.map(i=>ITEM_REGISTRY[i.type]);const minY=s[0].y,maxY=s[s.length-1].y+sr[sr.length-1].h;const gap=(maxY-minY-s.reduce((t,i,idx)=>t+sr[idx].h,0))/(s.length-1);let cur=minY;s.forEach((i,idx)=>{i.y=snap(cur);cur+=sr[idx].h+gap;});break;}
+  }
+  renderFurniture();renderSelectionLayer();
+}
+
+// ── Export HTML ────────────────────────────────────────────────────────────
+function buildExportHTML(geo,L,svg,adLbl){
+  const stats=[
+    ['Total Chairs',L.chairs],['Total Rows',L.rows],['Row Range',rowLabel(0)+' – '+rowLabel(L.rows-1)],['Chairs Per Side',L.N],['Chairs Per Row',L.cpr],
+    ['Total Students',L.students],...(L.adultSide!=='none'?[['Total Adults',L.adults]]:[]),
+    ['Adult Placement',adLbl],...(L.hasCtr?[['Center Aisle',ftIn(L.CA)]]:[]),
+    ['Side Aisle Width',ftIn(L.SA_W)],['Front Aisle Depth',ftIn(geo.FI)],['Rear Aisle Depth',ftIn(L.REAR_H)],
+    ['Back Wall Buffer',ftIn(geo.BH)],['Row Gap',L.GAP+' in'],['Row Pitch',ftIn(L.PITCH)],
+    ['Seating Depth',ftIn(L.SEAT_H)],['Seating Width',ftIn(L.SEAT_W)],
+    ['Chair Width','19.5 in'],['Chair Gap',L.clip===1?'1 in':'0 in'],
+    ['Stage Width',ftIn(geo.SW)],['Stage Depth',ftIn(geo.SH)],
+    ['Ramps',S.ramps?'Yes':'No'],['Camera Platform',S.cam?'Yes':'No'],
+    ...(S.avlN>0?[['AVL Positions',S.avlN]]:[]),
+    ...(L.MA?[['Mid Aisle Depth',ftIn(L.MA_DEPTH)],['Mid Aisle After Row',rowLabel(L.MA_AFTER)]]:[]),
+  ];
+  // Furniture counts prepended so they appear at top of stats (near stage)
+  const furnCounts=Object.entries((()=>{const c={};Object.values(furnitureItems).forEach(i=>{const l=ITEM_REGISTRY[i.type].label;c[l]=(c[l]||0)+1;});return c;})()).map(([k,v])=>[k,v]);
+  if(furnCounts.length)stats.unshift(...furnCounts);
+  const legendItems=[
+    ['Stage','#2a4f82','#4a7abf',true],['Ramps','#1c3a5c','#3a6a8a',S.ramps],
+    ['Student Chair','#154e8a','#2a7acc',true],['Adult Chair','#8a5c10','#d4920a',L.adultSide!=='none'],
+    ['Aisle','#0e2234','#1e3a54',true],['AVL Console','#1e1208','#c87820',S.avlN>0],
+    ['Camera Platform','#1a2e10','#5a9a30',S.cam],
+    ['Furniture Chair','#1a5fa8','#4a8ad8',Object.values(furnitureItems).some(i=>i.type==='chair-furn')],
+    ['Rolling Curtain','#111111','#555555',Object.values(furnitureItems).some(i=>i.type==='curtain')],
+  ].filter(function(x){return x[3];})
+  .map(function(x){return`<div class="li"><div class="sw" style="background:${x[1]};border:1px solid ${x[2]}"></div>${x[0]}</div>`;}).join('');
+  const cells=stats.map(function(x){return`<div class="stat"><div class="sl">${x[0]}</div><div class="sv">${x[1]}</div></div>`;}).join('');
+  const ds=S.date?' · '+S.date:'';
+  const rawNotes=document.getElementById('notes-input')?document.getElementById('notes-input').value:'';
+  const noteLines=rawNotes.split('\n').map(function(l){return l.replace(/^[•\-*]\s*/,'').trim();}).filter(function(l){return l.length>0;});
+  const notesCol=noteLines.length?'<div class="card"><div class="notes-title">Notes</div><ul class="notes-list">'+noteLines.map(function(l){return'<li>'+l.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</li>';}).join('')+'</ul></div>':'';
+  return`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${VENUE} — ${S.title}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#181d2c;font-family:system-ui,Arial,sans-serif;color:#d8eaff;padding:14px 12px 32px}
+.outer{max-width:1600px;margin:0 auto;display:flex;gap:10px;align-items:flex-start}
+.left{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.right{flex:1;min-width:0}
+.notes-col{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.card{background:#0e1320;border:1.5px solid #263a56;border-radius:6px;padding:13px}
+.hdr{text-align:center;padding-bottom:10px;border-bottom:1px solid #263a56;margin-bottom:12px}
+.vn{font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#7ab0e0;margin-bottom:2px}
+.et{font-size:20px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#aad4f0;margin-bottom:3px}
+.sub{font-size:12px;color:#6090bb}
+.svgwrap svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;padding-top:10px;border-top:1px solid #263a56}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:#8ab0d0}
+.sw{width:13px;height:8px;border-radius:2px;flex-shrink:0}
+.sec{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#aad4f0;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid #263a56}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.stat{background:#111824;border:1px solid #1e3050;border-radius:4px;padding:7px 9px}
+.sl{font-size:9px;letter-spacing:.05em;color:#8aacc8;text-transform:uppercase;margin-bottom:2px}
+.sv{font-size:14px;font-weight:700;color:#e0eeff}
+.wm{font-size:10px;color:#2a4060;margin-top:10px}
+.notes-list{list-style:disc;padding-left:16px;margin:0}
+.notes-list li{font-size:12px;color:#c0d8f0;padding:3px 0;line-height:1.5}
+.notes-title{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#aad4f0;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid #263a56}
+@media print{body{padding:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body>
+<div class="outer">
+  <div class="left">
+    <div class="card"><div class="sec">Measurements &amp; Statistics</div><div class="grid">${cells}</div></div>
+    <div class="wm">Developed by: Holden W.</div>
+  </div>
+  <div class="right">
+    <div class="card">
+      <div class="hdr"><div class="vn">${VENUE}</div><div class="et">${S.title}</div><div class="sub">${L.chairs} Chairs &nbsp;·&nbsp; 83 ft × 144 ft${ds}</div></div>
+      <div class="svgwrap">${svg}</div>
+      <div class="legend">${legendItems}</div>
+    </div>
+  </div>
+  <div class="notes-col">${notesCol}</div>
+</div>
+</body></html>`;
+}
+
+function dlFile(content,name,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+let _svg=null,_geo=null;
+
+function render(){
+  const geo=computeGeo();_geo=geo;
+  const L=calcLayout(geo);
+  const avlPos=getAVL(L);
+
+  // Messages
+  const mc=document.getElementById('msg-container');
+  mc.innerHTML='';
+  L.errors.forEach(function(e){const d=document.createElement('div');d.className='msg-err';d.textContent='⚠ '+e;mc.appendChild(d);});
+  L.warnings.forEach(function(w){const d=document.createElement('div');d.className='msg-warn';d.textContent='△ '+w;mc.appendChild(d);});
+
+  // Diagram header
+  document.getElementById('diag-title').textContent=S.title||'—';
+  const ds=S.date?' · '+S.date:'';
+  document.getElementById('diag-sub').textContent=(L.valid?L.chairs:'—')+' Chairs · 83 ft × 144 ft'+ds;
+
+  // Show/hide center aisle input
+  document.getElementById('cell-ca').style.display=S.hasCtr?'':'none';
+  // Show/hide different first rows cells
+  document.getElementById('cell-fr1').style.display=S.diffFirstRows?'':'none';
+  document.getElementById('cell-fr2').style.display=(S.diffFirstRows&&S.rows>1)?'':'none';
+  document.getElementById('cell-ma-after').style.display=S.midAisle?'':'none';
+  document.getElementById('cell-ma-depth').style.display=S.midAisle?'':'none';
+
+  // Row gap warning
+  const gcell=document.getElementById('cell-gap');
+  if(S.rowGap<12){gcell.className='cell cell-warn';}else{gcell.className='cell cell-purple';}
+
+  // Back-calculate derived fields
+  if(L.valid){
+    const tcInp=document.getElementById('inp-total-chairs');
+    if(document.activeElement!==tcInp)tcInp.value=L.chairs;
+    const cprInp=document.getElementById('inp-cpr');
+    if(document.activeElement!==cprInp)cprInp.value=L.dfr?L.N*2:L.cpr;
+  }
+
+  // AVL side/mirror notes
+  document.getElementById('avl-side-wrap').style.display=(S.avlN>0&&S.hasCtr)?'block':'none';
+  document.getElementById('avl-mirror-note').style.display=S.avlN>2?'block':'none';
+
+  // SVG
+  if(L.valid){
+    _svg=makeSVG(geo,L,avlPos);
+    document.getElementById('svg-container').innerHTML=_svg;
+    renderFurniture();renderMeasureLines();renderSelectionLayer();
+    attachSVGEvents();
+    document.getElementById('canvas-wrap').className=interactionMode==='measure'?'measure-mode':'';
+    document.getElementById('export-card').style.display='';
+    document.getElementById('stats-card').style.display='';
+  }else{
+    _svg=null;
+    document.getElementById('svg-container').innerHTML='<div class="no-diagram">Fix errors to see diagram.</div>';
+    document.getElementById('export-card').style.display='none';
+    document.getElementById('stats-card').style.display='none';
+  }
+
+  // Legend
+  const legData=[
+    ['Stage','#2a4f82','#4a7abf',true],
+    ['Ramps','#1c3a5c','#3a6a8a',S.ramps],
+    ['Student Chair','#154e8a','#2a7acc',true],
+    ['Adult Chair','#8a5c10','#d4920a',S.adults!=='none'],
+    ['Aisle','#0e2234','#1e3a54',true],
+    ['AVL Console','#1e1208','#c87820',S.avlN>0],
+    ['Camera Platform','#1a2e10','#5a9a30',S.cam],
+    ['Furniture Chair','#1a5fa8','#4a8ad8',Object.values(furnitureItems).some(i=>i.type==='chair-furn')],
+  ];
+  document.getElementById('legend').innerHTML=legData.filter(function(x){return x[3];}).map(function(x){
+    return`<div class="leg-item"><div class="leg-swatch" style="background:${x[1]};border:1px solid ${x[2]}"></div>${x[0]}</div>`;
+  }).join('');
+
+  // Stats grid
+  if(L.valid){
+    const adLbl={both:'Both Ends',left:'Left Only',right:'Right Only',none:'None'}[S.adults];
+    const statData=[
+      ['Total Chairs',L.chairs,true],['Total Rows',L.rows,false],['Row Range',rowLabel(0)+' – '+rowLabel(L.rows-1),false],
+      ['Chairs Per Side',L.N,false],['Chairs Per Row',L.cpr,false],
+      ...(L.dfr?[['Row 1 Chairs/Side',L.fr1N,false],['Row 2 Chairs/Side',L.fr2N,false]]:[]),
+      ...(L.MA?[['Mid Aisle Depth',ftIn(L.MA_DEPTH),false],['Mid Aisle After Row',rowLabel(L.MA_AFTER),false]]:[]),
+      ['Total Students',L.students,false],
+      ...(S.adults!=='none'?[['Total Adults',L.adults,false]]:[]),
+      ['Adult Placement',adLbl,false],
+      ...(S.hasCtr?[['Ctr Aisle Width',ftIn(L.CA),false]]:[]),
+      ['Side Aisle Width',ftIn(L.SA_W),false],
+      ['Front Aisle Depth',ftIn(geo.FI),false],
+      ['Rear Aisle Depth',ftIn(L.REAR_H),false],
+      ['Back Wall Buffer',ftIn(geo.BH),false],
+      ['Row Gap',L.GAP+' in',false],['Row Pitch',ftIn(L.PITCH),false],
+      ['Seating Depth',ftIn(L.SEAT_H),false],['Seating Width',ftIn(L.SEAT_W),false],
+      ['Chair Width','19.5 in',false],['Chair Gap',L.clip===1?'1 in':'0 in',false],
+      ...(S.avlN>0?[['AVL Positions',S.avlN,false]]:[]),
+    ];
+    document.getElementById('stats-grid').innerHTML=statData.map(function(x){
+      return`<div class="stat-cell${x[2]?' green':''}"><div class="sl">${x[0]}</div><div class="sv">${x[1]}</div></div>`;
+    }).join('');
+  }
+}
+
+// ── Event Wiring ───────────────────────────────────────────────────────────
+
+// Stepper buttons
+document.getElementById('sw-dec').addEventListener('click',function(){S.swFt=Math.max(8,S.swFt-4);updateStepperUI();render();});
+document.getElementById('sw-inc').addEventListener('click',function(){S.swFt=Math.min(80,S.swFt+4);updateStepperUI();render();});
+document.getElementById('sd-dec').addEventListener('click',function(){S.sdFt=Math.max(8,S.sdFt-8);updateStepperUI();render();});
+document.getElementById('sd-inc').addEventListener('click',function(){S.sdFt=Math.min(64,S.sdFt+8);updateStepperUI();render();});
+
+function updateStepperUI(){
+  document.getElementById('sw-val').textContent=S.swFt+' ft';
+  document.getElementById('sd-val').textContent=S.sdFt+' ft';
+  document.getElementById('sw-dec').disabled=S.swFt<=8;
+  document.getElementById('sw-inc').disabled=S.swFt>=80;
+  document.getElementById('sd-dec').disabled=S.sdFt<=8;
+  document.getElementById('sd-inc').disabled=S.sdFt>=64;
+}
+
+// Number inputs
+function numInp(id,stateKey,min,transform){
+  document.getElementById(id).addEventListener('input',function(){
+    const v=parseFloat(this.value);
+    if(isNaN(v))return;
+    S[stateKey]=transform?transform(v):Math.max(min!=null?min:0,v);
+    render();
+  });
+}
+numInp('inp-bw','bwFt',0);
+numInp('inp-fa','faFt',2);
+numInp('inp-rows','rows',1,function(v){return Math.max(1,Math.round(v));});
+numInp('inp-cps','cps',2,function(v){return Math.max(2,Math.round(v));});
+numInp('inp-gap','rowGap',0,function(v){return Math.max(0,Math.round(v));});
+numInp('inp-ca','caIn',24,function(v){return Math.round(v*12);});
+numInp('inp-fr1','fr1cps',1,function(v){return Math.max(1,Math.round(v));});
+numInp('inp-fr2','fr2cps',1,function(v){return Math.max(1,Math.round(v));});
+numInp('inp-ma-after','midAisleAfter',1,function(v){return Math.max(1,Math.round(v));});
+numInp('inp-ma-depth','midAisleDepth',1,function(v){return Math.max(1,v);});
+
+document.getElementById('inp-title').addEventListener('input',function(){S.title=this.value;render();});
+document.getElementById('inp-date').addEventListener('input',function(){S.date=this.value;render();});
+
+document.getElementById('inp-total-chairs').addEventListener('input',function(){
+  const v=parseFloat(this.value);if(isNaN(v))return;
+  S.cps=Math.max(2,Math.round(v/(2*Math.max(1,S.rows))));
+  document.getElementById('inp-cps').value=S.cps;
+  render();
+});
+document.getElementById('inp-cpr').addEventListener('input',function(){
+  const v=parseFloat(this.value);if(isNaN(v))return;
+  S.cps=Math.max(2,Math.round(v/2));
+  document.getElementById('inp-cps').value=S.cps;
+  render();
+});
+
+// Toggle/select buttons
+document.addEventListener('click',function(e){
+  const t=e.target;
+  if(t.dataset.group){
+    const group=t.dataset.group,val=t.dataset.val;
+    // Deactivate siblings
+    document.querySelectorAll('[data-group="'+group+'"]').forEach(function(b){b.classList.remove('active');});
+    t.classList.add('active');
+    if(group==='ramps')S.ramps=val==='1';
+    else if(group==='cam')S.cam=val==='1';
+    else if(group==='hasctr'){S.hasCtr=val==='1';}
+    else if(group==='clip')S.clip=parseInt(val);
+    else if(group==='adults')S.adults=val;
+    else if(group==='avlside')S.avlSide=val;
+    else if(group==='rowlabels')S.rowLabels=val;
+    else if(group==='midaisle'){S.midAisle=val==='1';}
+    else if(group==='difffirstrows'){
+      S.diffFirstRows=val==='1';
+      if(S.diffFirstRows){
+        // Initialize first-row counts to match current main count so nothing moves
+        S.fr1cps=S.cps; S.fr2cps=S.cps;
+        const f1=document.getElementById('inp-fr1');if(f1)f1.value=S.cps;
+        const f2=document.getElementById('inp-fr2');if(f2)f2.value=S.cps;
+      }
+    }
+    render();
+  }
+  if(t.dataset.avl!==undefined){
+    document.querySelectorAll('.avl-btn').forEach(function(b){b.classList.remove('active');});
+    t.classList.add('active');
+    S.avlN=parseInt(t.dataset.avl);
+    render();
+  }
+});
+
+// Export
+document.getElementById('btn-html').addEventListener('click',function(){
+  if(!_svg)return;
+  if(S.title==='Forney HS Ceremony Ground Plan'&&!confirm('The event title is still the default.\nExport anyway?'))return;
+  const geo=computeGeo(),L=calcLayout(geo),av=getAVL(L);
+  const div=document.createElement('div');div.innerHTML=makeSVG(geo,L,av);
+  const se=div.querySelector('svg');
+  const fl=se.getElementById('layer-furniture');if(fl)fl.innerHTML=Object.values(furnitureItems).map(i=>renderItemSVG(i,true)).join('');
+  const ml2=se.getElementById('layer-measures');if(ml2)ml2.innerHTML=renderMeasureLines(true);
+  const sl=se.getElementById('layer-select');if(sl)sl.innerHTML='';
+  const adLbl={both:'Both Ends',left:'Left Only',right:'Right Only',none:'None'}[S.adults];
+  dlFile(buildExportHTML(geo,L,se.outerHTML,adLbl),S.title.replace(/\s+/g,'-')+'.html','text/html');
+});
+document.getElementById('btn-svg').addEventListener('click',function(){
+  if(!_svg)return;
+  if(S.title==='Forney HS Ceremony Ground Plan'&&!confirm('The event title is still the default.\nExport anyway?'))return;
+  const geo=computeGeo(),L=calcLayout(geo),av=getAVL(L);
+  const div=document.createElement('div');div.innerHTML=makeSVG(geo,L,av);
+  const se=div.querySelector('svg');
+  const fl=se.getElementById('layer-furniture');if(fl)fl.innerHTML=Object.values(furnitureItems).map(i=>renderItemSVG(i,true)).join('');
+  const ml2=se.getElementById('layer-measures');if(ml2)ml2.innerHTML=renderMeasureLines(true);
+  const sl=se.getElementById('layer-select');if(sl)sl.innerHTML='';
+  dlFile(se.outerHTML,S.title.replace(/\s+/g,'-')+'.svg','image/svg+xml');
+});
+
+// v2: Dimension toggles
+document.querySelectorAll('.dim-chk').forEach(chk=>{chk.addEventListener('change',function(){DV[this.id]=this.checked;render();});});
+function setDV(keys,val){keys.forEach(k=>{DV[k]=val;const el=document.getElementById(k);if(el)el.checked=val;});render();}
+document.getElementById('btn-all-dims').addEventListener('click',()=>setDV(DV_DIMS,true));
+document.getElementById('btn-all-labels').addEventListener('click',()=>setDV(DV_LABELS,true));
+document.getElementById('btn-none-all').addEventListener('click',()=>setDV(DV_ALL,false));
+// v2: Furniture place
+document.addEventListener('click',function(e2){if(e2.target.dataset.place)placeItem(e2.target.dataset.place);});
+// v2: Mode
+function setMode(mode){interactionMode=mode;document.getElementById('btn-mode-select').classList.toggle('active',mode==='select');document.getElementById('btn-mode-measure').classList.toggle('active',mode==='measure');const wrap=document.getElementById('canvas-wrap');if(wrap)wrap.className=mode==='measure'?'measure-mode':'';}
+document.getElementById('btn-mode-select').addEventListener('click',()=>setMode('select'));
+document.getElementById('btn-mode-measure').addEventListener('click',()=>setMode('measure'));
+// v2: Edit toolbar
+document.getElementById('btn-rot-ccw').addEventListener('click',()=>rotateSelection(-45));
+document.getElementById('btn-rot-cw').addEventListener('click',()=>rotateSelection(45));
+document.getElementById('btn-dup').addEventListener('click',()=>{duplicateSelection();updateCountPanel();});
+document.getElementById('btn-del').addEventListener('click',()=>{deleteSelection();updateCountPanel();});
+document.getElementById('btn-lock').addEventListener('click',lockToggleSelection);
+document.getElementById('btn-undo').addEventListener('click',undo);
+document.getElementById('btn-redo').addEventListener('click',redo);
+{const AM={'btn-al-l':'left','btn-al-r':'right','btn-al-t':'top','btn-al-b':'bottom','btn-al-ch':'centerH','btn-al-cv':'centerV','btn-al-dh':'distH','btn-al-dv':'distV'};Object.entries(AM).forEach(([id,mode])=>document.getElementById(id).addEventListener('click',()=>alignSelection(mode)));}
+// v2: Save/Load
+document.getElementById('btn-save-json').addEventListener('click',()=>{dlFile(JSON.stringify({version:2,items:Object.values(furnitureItems),measureLines},null,2),'ceremony-layout.json','application/json');});
+document.getElementById('inp-load-json').addEventListener('change',function(){if(!this.files[0])return;const reader=new FileReader();reader.onload=e2=>{try{const p=JSON.parse(e2.target.result);snapshot();furnitureItems={};(p.items||[]).forEach(item=>{furnitureItems[item.id]=item;});measureLines=p.measureLines||[];selection.clear();renderFurniture();renderSelectionLayer();renderMeasureLines();updateCountPanel();}catch(err){alert('Failed to load: '+err.message);}};reader.readAsText(this.files[0]);this.value='';});
+// v2: Keyboard
+document.addEventListener('keydown',function(e2){if(e2.target.tagName==='INPUT')return;if((e2.ctrlKey||e2.metaKey)&&e2.key==='z'){e2.preventDefault();undo();}if((e2.ctrlKey||e2.metaKey)&&(e2.key==='y'||(e2.shiftKey&&e2.key==='z'))){e2.preventDefault();redo();}if(e2.key==='Delete'||e2.key==='Backspace'){deleteSelection();updateCountPanel();}if(e2.key==='Escape'){selection.clear();measureLines.forEach(ml=>ml.selected=false);renderSelectionLayer();renderMeasureLines();}});
+
+// Collapsible sections
+document.querySelectorAll('.section-head[data-target]').forEach(function(head){
+  head.addEventListener('click',function(e){
+    if(e.target.closest('button')||e.target.closest('input'))return;
+    const bodyId=head.dataset.target;
+    const body=document.getElementById(bodyId);
+    if(!body)return;
+    const collapsed=body.classList.toggle('collapsed');
+    head.classList.toggle('collapsed',collapsed);
+  });
+});
+
+// Notes: persist to state
+document.getElementById('notes-input').addEventListener('input',function(){S.notesText=this.value;});
+// Notes: auto-bullet on Enter
+document.getElementById('notes-input').addEventListener('keydown',function(e){
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  const ta=this,start=ta.selectionStart,val=ta.value;
+  const before=val.substring(0,start),after=val.substring(start);
+  ta.value=before+'\n• '+after;
+  const pos=start+3;ta.selectionStart=ta.selectionEnd=pos;
+});
+document.getElementById('notes-input').addEventListener('focus',function(){
+  if(this.value==='')this.value='• ';
+});
+
+// Stepper vals: double-click to type a value directly
+document.querySelectorAll('.stepper .val').forEach(function(val){
+  val.title='Double-click to type value';
+  val.addEventListener('dblclick',function(){
+    const current=parseFloat(this.textContent);
+    const inp=document.createElement('input');
+    inp.type='number';inp.value=current;inp.step='any';
+    inp.style.cssText='width:100%;background:transparent;border:none;border-bottom:1.5px solid #7050c0;font-size:15px;font-weight:700;color:#e0d0ff;text-align:center;outline:none;font-family:system-ui,Arial,sans-serif';
+    const id=this.id;
+    const self=this;
+    inp.addEventListener('blur',function(){
+      const v=parseFloat(this.value);
+      if(!isNaN(v)){
+        if(id==='sw-val'){S.swFt=Math.max(8,v);updateStepperUI();}
+        else if(id==='sd-val'){S.sdFt=Math.max(8,v);updateStepperUI();}
+        render();
+      }
+      self.style.display='';this.remove();
+    });
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter')this.blur();if(e.key==='Escape'){self.style.display='';this.remove();}});
+    this.style.display='none';
+    this.parentNode.insertBefore(inp,this);
+    inp.focus();inp.select();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SCENARIO TABS
+// ═══════════════════════════════════════════════════════════════
+let _tabs=[];      // [{id, name, state}]
+let _activeTab=0;  // index
+
+function _captureState(){
+  return {
+    S:JSON.parse(JSON.stringify(S)),
+    furnitureItems:JSON.parse(JSON.stringify(furnitureItems)),
+    measureLines:JSON.parse(JSON.stringify(measureLines)),
+    notesText:document.getElementById('notes-input')?document.getElementById('notes-input').value:S.notesText,
+  };
+}
+
+function _applyState(snap){
+  Object.assign(S,snap.S);
+  furnitureItems=JSON.parse(JSON.stringify(snap.furnitureItems));
+  measureLines=JSON.parse(JSON.stringify(snap.measureLines));
+  selection.clear();
+  // Restore UI controls to match S
+  _syncControlsToS();
+  render();
+  renderFurniture();renderMeasureLines();renderSelectionLayer();updateCountPanel();
+  const ni=document.getElementById('notes-input');
+  if(ni){ni.value=snap.notesText||'';S.notesText=ni.value;}
+}
+
+function _syncControlsToS(){
+  // Text inputs
+  ['inp-title','inp-date'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el)el.value=id==='inp-title'?S.title:S.date;
+  });
+  // Number inputs
+  const numMap={
+    'inp-bw':S.bwFt,'inp-fa':S.faFt,'inp-rows':S.rows,'inp-cps':S.cps,
+    'inp-gap':S.rowGap,'inp-ca':S.caIn/12,'inp-fr1':S.fr1cps,'inp-fr2':S.fr2cps
+  };
+  Object.entries(numMap).forEach(function([id,val]){
+    const el=document.getElementById(id);if(el)el.value=val;
+  });
+  // Toggle buttons (data-group)
+  const groupMap={
+    ramps:S.ramps?'1':'0', cam:S.cam?'1':'0',
+    hasctr:S.hasCtr?'1':'0', clip:String(S.clip),
+    adults:S.adults, avlside:S.avlSide,
+    rowlabels:S.rowLabels,
+    difffirstrows:S.diffFirstRows?'1':'0',
+  };
+  Object.entries(groupMap).forEach(function([group,val]){
+    document.querySelectorAll('[data-group="'+group+'"]').forEach(function(b){
+      b.classList.toggle('active',b.dataset.val===val);
+    });
+  });
+  // AVL buttons
+  document.querySelectorAll('.avl-btn').forEach(function(b){
+    b.classList.toggle('active',parseInt(b.dataset.avl)===S.avlN);
+  });
+  // Steppers
+  updateStepperUI();
+  // DV checkboxes
+  Object.keys(DV).forEach(function(k){
+    const el=document.getElementById(k);if(el)el.checked=DV[k];
+  });
+}
+
+function _renderTabBar(){
+  const bar=document.getElementById('tab-bar');
+  bar.innerHTML=_tabs.map(function(tab,i){
+    const active=i===_activeTab?'active':'';
+    const closeBtn=_tabs.length>1
+      ?'<span class="tab-close" data-tab-close="'+i+'" title="Delete scenario">&#10005;</span>'
+      :'';
+    return'<div class="tab '+active+'" data-tab-idx="'+i+'">'+tab.name+closeBtn+'</div>';
+  }).join('')+'<span class="tab-add" id="btn-add-tab" title="New scenario">+</span>';
+
+  // Click: switch tab
+  bar.querySelectorAll('[data-tab-idx]').forEach(function(el){
+    el.addEventListener('click',function(e){
+      if(e.target.dataset.tabClose!==undefined)return;
+      const idx=parseInt(this.dataset.tabIdx);
+      if(idx===_activeTab)return;
+      // Save current state into current tab
+      _tabs[_activeTab].state=_captureState();
+      _activeTab=idx;
+      _applyState(_tabs[_activeTab].state);
+      _renderTabBar();
+    });
+  });
+
+  // Close buttons
+  bar.querySelectorAll('[data-tab-close]').forEach(function(el){
+    el.addEventListener('click',function(e){
+      e.stopPropagation();
+      const idx=parseInt(this.dataset.tabClose);
+      if(_tabs.length<=1)return;
+      const name=_tabs[idx].name;
+      if(!confirm('Delete scenario "'+name+'"?'))return;
+      _tabs.splice(idx,1);
+      if(_activeTab>=_tabs.length)_activeTab=_tabs.length-1;
+      _applyState(_tabs[_activeTab].state);
+      _renderTabBar();
+    });
+  });
+
+  // Add tab
+  document.getElementById('btn-add-tab').addEventListener('click',function(){
+    // Save current
+    _tabs[_activeTab].state=_captureState();
+    // New tab duplicates current state
+    const newState=_captureState();
+    const num=_tabs.length+1;
+    _tabs.push({id:Date.now(),name:'Scenario '+num,state:newState});
+    _activeTab=_tabs.length-1;
+    _renderTabBar();
+    // Prompt rename
+    const newName=prompt('Name this scenario:','Scenario '+num);
+    if(newName&&newName.trim())_tabs[_activeTab].name=newName.trim();
+    _renderTabBar();
+  });
+
+  // Double-click to rename
+  bar.querySelectorAll('[data-tab-idx]').forEach(function(el){
+    el.addEventListener('dblclick',function(e){
+      if(e.target.dataset.tabClose!==undefined)return;
+      const idx=parseInt(this.dataset.tabIdx);
+      const newName=prompt('Rename scenario:',_tabs[idx].name);
+      if(newName&&newName.trim())_tabs[idx].name=newName.trim();
+      _renderTabBar();
+    });
+  });
+}
+
+// Save current state into active tab whenever render() runs
+const _origRender=render;
+render=function(){
+  _origRender();
+  if(_tabs.length)_tabs[_activeTab].state=_captureState();
+};
+
+// Init — init first tab
+updateStepperUI();
+document.getElementById('notes-input').value=S.notesText;
+setMode('select');
+render();
+updateCountPanel();
+// Bootstrap scenario tabs
+_tabs=[{id:Date.now(),name:'Scenario 1',state:_captureState()}];
+_activeTab=0;
+_renderTabBar();
+</script>
+</body>
+</html>
